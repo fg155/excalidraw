@@ -15,6 +15,7 @@ import { repository } from "./repository";
 import { DocumentSession } from "./session";
 import { defaults, drawingPreferences, parseSettings } from "./settings";
 import { BoardHome, boardLabel as label } from "./BoardHome";
+import { BackgroundPanel } from "./BackgroundPanel";
 
 import "./styles.css";
 
@@ -34,6 +35,7 @@ type OpenDocument = {
   session: DocumentSession;
 };
 type Panel =
+  | "background"
   | "settings"
   | "recovery"
   | "trash"
@@ -353,6 +355,14 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
         )}
         {document && (
           <button
+            disabled={busy || !api.current}
+            onClick={() => setPanel("background")}
+          >
+            背景
+          </button>
+        )}
+        {document && (
+          <button
             disabled={busy || !document}
             onClick={() => void operate(flush)}
           >
@@ -441,6 +451,7 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
               }}
               onExcalidrawAPI={(value) => {
                 api.current = value;
+                redraw((previous) => previous + 1);
               }}
               onInitialize={(value) => {
                 if (active.current !== document) {
@@ -487,6 +498,7 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
             aria-label={
               {
                 settings: "个人设置",
+                background: "设置背景格式",
                 recovery: "恢复画布",
                 trash: "回收站",
                 new: "新建画布",
@@ -500,6 +512,7 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
                 {
                   {
                     settings: "个人设置",
+                    background: "设置背景格式",
                     recovery: "恢复画布",
                     trash: "回收站",
                     new: "新建画布",
@@ -548,6 +561,9 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
                   确认
                 </button>
               </form>
+            )}
+            {panel === "background" && api.current && (
+              <BackgroundPanel api={api.current} />
             )}
             {panel === "delete" && (
               <>

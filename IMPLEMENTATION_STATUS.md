@@ -1,6 +1,15 @@
-# Implementation checkpoint — board gallery, recycle bin and clean line tool
+# Implementation checkpoint — paper backgrounds and board gallery
 
 This remains a development preview. The user manually pushed the CLI forwarding correction, supplied a successful Windows x64 Actions screenshot (including native build and artifact upload), and ran the app. The new correction below is local only and still needs a new user-pushed cloud build and physical tablet acceptance. Resume here rather than starting again.
+
+## Latest paper-background revision (2026-09-18)
+
+- Added desktop header Background panel: 10 paper colors and 9 styles matching the user's reference (none, dots, square, dense graph, mixed major/minor grid, diamond, wide ruled, triangle, narrow ruled). No extra help prose.
+- `paperGrid` is an independent per-board persisted AppState field with validation, legacy default `none`, and undo/redo support. Does not change grid snapping, drawing style, pressure or tool selection. New boards do not inherit another board's paper.
+- Shared world-anchored geometry renders canvas, SVG exports and picker previews. Paper follows pan/zoom, fades when too dense, and contrasts with light/dark backgrounds. Canvas/PNG and SVG include paper only when background export is enabled; transparent export omits it. Blank and populated gallery thumbnails include paper without writing back scene normalization.
+- Fixed header API readiness rendering so Background remains available after reopening a saved board.
+- Verification: 164 focused JS/React tests passed, 1 existing upstream todo; root/desktop typechecks, targeted lint, frontend production build and diff checks passed. Includes 23 new geometry/persistence/export tests, desktop save/reopen/undo/no-cross-board-leak test, and all 20 pen/eraser/straight-ink tests run with mixed paper enabled. Windows CI includes the new tests.
+- Browser visual QA used mock native IPC and disposable in-memory boards: checked picker layout/selection, yellow triangular paper, black dotted paper and a blank board's gallery thumbnail. Production build uses real Tauri IPC separately. No user board files touched. No physical Huion test, native executable build, tool installation, GitHub push or workflow dispatch performed. User must manually push and download a new Windows artifact to test this revision.
 
 ## Latest gallery / recycle-bin revision (2026-09-18)
 

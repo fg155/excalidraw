@@ -58,6 +58,7 @@ describe("straight ink pen input and rendered previews", () => {
     await render(
       <Excalidraw
         handleKeyboardGlobally
+        initialData={{ appState: { paperGrid: "mixed" } }}
         straightInk={{
           version: 1,
           shift: true,

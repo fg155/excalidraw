@@ -1,0 +1,21 @@
+{
+  "name": "excalidraw-personal-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
+    "build": "vite build",
+    "tauri": "tauri",
+    "icons": "tauri icon ../public/favicon.svg --output src-tauri/icons",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "*",
+    "@tauri-apps/api": "^2.8.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.8.0"
+  }
+}

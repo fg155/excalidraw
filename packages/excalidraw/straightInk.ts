@@ -4,6 +4,9 @@ import { pointFrom } from "@excalidraw/math";
 import type { LocalPoint } from "@excalidraw/math";
 import type {
   ExcalidrawFreeDrawElement,
+  ExcalidrawElement,
+  ExcalidrawLineElement,
+  ExcalidrawLinearElement,
   NonDeleted,
 } from "@excalidraw/element/types";
 
@@ -43,19 +46,26 @@ export class StraightInk {
     straight: boolean;
     anchor: LocalPoint | null;
     timer: number | null;
+    pointerId: number;
+    pointerType: string;
   } | null = null;
 
   constructor(private app: App) {}
 
-  start(element: ExcalidrawFreeDrawElement, shift: boolean) {
+  start(
+    element: ExcalidrawFreeDrawElement,
+    event: Pick<PointerEvent, "shiftKey" | "pointerId" | "pointerType">,
+  ) {
     this.clear();
     const config = this.app.props.straightInk;
     if (config?.shift || config?.hold) {
       this.gesture = {
         id: element.id,
-        straight: !!(shift && config.shift),
+        straight: !!(event.shiftKey && config.shift),
         anchor: null,
         timer: null,
+        pointerId: event.pointerId,
+        pointerType: event.pointerType,
       };
     }
   }
@@ -67,7 +77,23 @@ export class StraightInk {
     this.gesture = null;
   }
 
-  cancel = () => {
+  isOtherPointer(event: Pick<PointerEvent, "pointerId">) {
+    return !!this.gesture && event.pointerId !== this.gesture.pointerId;
+  }
+
+  ignorePalm(event: Pick<PointerEvent, "pointerType" | "pointerId">) {
+    return (
+      this.gesture?.pointerType === "pen" &&
+      this.app.state.penMode &&
+      event.pointerType === "touch" &&
+      this.isOtherPointer(event)
+    );
+  }
+
+  cancel = (event?: Pick<PointerEvent, "pointerId">) => {
+    if (event && this.isOtherPointer(event)) {
+      return;
+    }
     const id = this.gesture?.id;
     this.clear();
     if (id && this.app.state.newElement?.id === id) {
@@ -81,16 +107,20 @@ export class StraightInk {
   };
 
   /** Returns true when the normal freehand point append should be skipped. */
-  move(element: NonDeleted<ExcalidrawFreeDrawElement>, point: LocalPoint) {
+  move(element: NonDeleted<ExcalidrawElement>, point: LocalPoint) {
     const gesture = this.gesture;
-    if (!gesture || gesture.id !== element.id) {
+    if (
+      !gesture ||
+      gesture.id !== element.id ||
+      (element.type !== "freedraw" && element.type !== "line")
+    ) {
       return false;
     }
     if (gesture.straight) {
       this.preview(element, point);
       return true;
     }
-    if (!this.app.props.straightInk?.hold) {
+    if (element.type !== "freedraw" || !this.app.props.straightInk?.hold) {
       return false;
     }
     const zoom = this.app.state.zoom.value;
@@ -112,6 +142,8 @@ export class StraightInk {
         const current = this.app.state.newElement;
         if (
           this.gesture === gesture &&
+          this.app.state.activeTool.type === "freedraw" &&
+          this.app.props.straightInk?.hold &&
           current?.id === gesture.id &&
           current.type === "freedraw" &&
           isNearlyStraight(current.points, this.app.state.zoom.value)
@@ -125,23 +157,43 @@ export class StraightInk {
   }
 
   private preview(
-    element: NonDeleted<ExcalidrawFreeDrawElement>,
+    element: NonDeleted<ExcalidrawFreeDrawElement | ExcalidrawLinearElement>,
     point: LocalPoint,
   ) {
-    this.app.scene.mutateElement(element, {
-      points: [pointFrom<LocalPoint>(0, 0), point],
-      pressures: [],
-      simulatePressure: true,
-    });
-    this.app.setState({ newElement: element });
+    // Use a real line throughout the preview, not a two-point freedraw outline.
+    // Freedraw streamline smoothing pulls a sparse preview short of the pen tip.
+    if (element.type === "line") {
+      this.app.scene.mutateElement(element, {
+        points: [pointFrom<LocalPoint>(0, 0), point],
+      });
+      this.app.setState({ newElement: element });
+    } else {
+      const line = this.toLine(element, point);
+      this.app.scene.replaceAllElements(
+        this.app.scene
+          .getElementsIncludingDeleted()
+          .map((item) => (item.id === element.id ? line : item)),
+      );
+      this.app.setState({ newElement: line });
+    }
   }
 
-  finish(element: ExcalidrawFreeDrawElement, point: LocalPoint) {
+  finish(
+    element: ExcalidrawFreeDrawElement | ExcalidrawLinearElement,
+    point: LocalPoint,
+  ) {
     const straight = this.gesture?.id === element.id && this.gesture.straight;
     this.clear();
     if (!straight) {
       return null;
     }
+    return this.toLine(element, point);
+  }
+
+  private toLine(
+    element: ExcalidrawFreeDrawElement | ExcalidrawLinearElement,
+    point: LocalPoint,
+  ): NonDeleted<ExcalidrawLineElement> {
     const line = newLinearElement({
       ...element,
       type: "line",
@@ -149,9 +201,14 @@ export class StraightInk {
       width: Math.abs(point[0]),
       height: Math.abs(point[1]),
       roundness: null,
+      // Only converted strokes use the clean style; ordinary pen preferences stay intact.
+      roughness: 0,
+      polygon: false,
     });
     return {
       ...line,
+      type: "line",
+      polygon: false,
       id: element.id,
       index: element.index,
       version: element.version + 1,

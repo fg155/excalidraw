@@ -821,7 +821,14 @@ export type ElementRenderOffsets = ReadonlyMap<
 
 export interface ExcalidrawProps {
   /** Opt-in freehand-to-line gestures. Omitted keeps upstream behavior. */
-  straightInk?: { version: 1; shift: boolean; hold: boolean; holdMs: number };
+  straightInk?: {
+    version: 1;
+    shift: boolean;
+    hold: boolean;
+    holdMs: number;
+    /** Start ordinary lines in the clean style, without changing other tools. */
+    smoothLines?: boolean;
+  };
   className?: string;
   /**
    * Document that owns Excalidraw's mounted DOM.

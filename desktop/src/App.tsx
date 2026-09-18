@@ -14,6 +14,7 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import { repository } from "./repository";
 import { DocumentSession } from "./session";
 import { defaults, drawingPreferences, parseSettings } from "./settings";
+import { BoardHome, boardLabel as label } from "./BoardHome";
 
 import "./styles.css";
 
@@ -26,12 +27,20 @@ type Context = {
   settings: string | null;
 };
 type Recovery = { id: string; name: string; modified: number };
+type TrashEntry = { id: string; name: string; deletedAt: number };
 type OpenDocument = {
   key: number;
   initialData: ImportedDataState;
   session: DocumentSession;
 };
-type Panel = "settings" | "recovery" | "new" | "rename" | "delete" | null;
+type Panel =
+  | "settings"
+  | "recovery"
+  | "trash"
+  | "new"
+  | "rename"
+  | "delete"
+  | null;
 
 const emptyBoard = JSON.stringify({
   type: "excalidraw",
@@ -47,7 +56,6 @@ const filename = (name: string) => {
   }
   return trimmed.endsWith(".excalidraw") ? trimmed : `${trimmed}.excalidraw`;
 };
-const label = (name: string) => name.replace(/\.excalidraw$/, "");
 
 export function DesktopApp({ host }: { host: HTMLElement }) {
   const ownerDocument = host.ownerDocument;
@@ -65,6 +73,8 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
   const [panel, setPanel] = useState<Panel>(null);
   const [name, setName] = useState("");
   const [recoveries, setRecoveries] = useState<Recovery[]>([]);
+  const [trash, setTrash] = useState<TrashEntry[]>([]);
+  const [target, setTarget] = useState<BoardFile | null>(null);
   const [settings, setSettings] = useState<Settings>(defaults);
   const settingsRef = useRef(settings);
   const settingsWritable = useRef(false);
@@ -74,6 +84,8 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
   const settingsTimer = useRef<number | undefined>(undefined);
 
   const refresh = async () => setFiles(await repository.list());
+  const refreshTrash = async () =>
+    setTrash(await invoke<TrashEntry[]>("list_trash"));
   const report = (reason: unknown) => setError(String(reason));
   const operate = async (action: () => Promise<void>) => {
     if (busyRef.current) {
@@ -160,6 +172,7 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
         if (value.directory) {
           await refresh();
         }
+        await refreshTrash();
       })
       .catch(report);
     const closeListener = getCurrentWindow().onCloseRequested(async (event) => {
@@ -191,6 +204,20 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
     // Owner and mutable refs are stable for this application lifetime.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // No background service: expire while open, or on the next launch.
+  useEffect(() => {
+    if (!trash.length) {
+      return;
+    }
+    const nextExpiry =
+      Math.min(...trash.map((entry) => entry.deletedAt)) +
+      10 * 24 * 60 * 60 * 1000;
+    const timer = ownerWindow.setTimeout(() => {
+      void refreshTrash().catch(report);
+    }, Math.max(1000, Math.min(24 * 60 * 60 * 1000, nextExpiry - Date.now())));
+    return () => ownerWindow.clearTimeout(timer);
+  }, [trash, ownerWindow]);
 
   const open = async (board: LoadedBoard) => {
     // Decode first so a bad file cannot close the currently open document.
@@ -256,43 +283,82 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
     await refresh();
   };
 
+  const goHome = async () => {
+    await flush();
+    await refresh();
+    active.current?.session.dispose();
+    active.current = null;
+    api.current = null;
+    setDocument(null);
+    setPanel(null);
+    setTarget(null);
+  };
+
   const gesture = useMemo(
     () => ({
       version: 1 as const,
       shift: settings.shift,
       hold: settings.hold,
       holdMs: settings.holdMs,
+      smoothLines: true,
     }),
     [settings.shift, settings.hold, settings.holdMs],
   );
   const current = document?.session;
   const stateLabel = current
     ? {
-        saved: "已保存到本机",
-        pending: "等待保存…",
-        saving: "正在保存…",
-        error: "保存失败 · 请重试",
+        saved: "已保存",
+        pending: "未保存",
+        saving: "保存中…",
+        error: "保存失败",
       }[current.state]
-    : "未打开画布";
+    : "";
 
   return (
     <div className={`desktop-shell ${settings.theme}`}>
       <header className="desktop-header">
-        <strong>
-          Excalidraw <span>Personal</span>
-        </strong>
+        {document ? (
+          <button
+            className="home-button"
+            aria-label="返回画板首页"
+            title="返回画板首页"
+            disabled={busy || panel !== null}
+            onClick={() => void operate(goHome)}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="3" width="7" height="7" rx="1.5" />
+              <rect x="3" y="14" width="7" height="7" rx="1.5" />
+              <rect x="14" y="14" width="7" height="7" rx="1.5" />
+            </svg>
+          </button>
+        ) : (
+          <strong>Excalidraw</strong>
+        )}
         <span className="current-name">
-          {current ? label(current.name) : "你的本地画布"}
+          {current ? label(current.name) : ""}
         </span>
-        <span className={`save-status ${current?.state}`} role="status">
-          {stateLabel}
-        </span>
-        <button
-          disabled={busy || !document}
-          onClick={() => void operate(flush)}
-        >
-          保存
-        </button>
+        {current && (
+          <span className={`save-status ${current.state}`} role="status">
+            {stateLabel}
+          </span>
+        )}
+        {document && (
+          <button
+            disabled={busy || !document}
+            onClick={() => void operate(flush)}
+          >
+            保存
+          </button>
+        )}
         <button
           disabled={busy || !context}
           onClick={() => setPanel("settings")}
@@ -303,109 +369,63 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
       {(error || current?.error) && (
         <div className="notice error" role="alert">
           {error || current?.error}
-          <button onClick={() => setError("")}>收起提示</button>
+          <button onClick={() => setError("")} aria-label="关闭错误提示">
+            ×
+          </button>
         </div>
       )}
       {current?.conflict && (
         <div className="notice" role="status">
-          检测到外部修改：原文件已保留，当前编辑的是冲突副本「
-          {label(current.name)}」。请检查后手动合并。
+          文件有外部修改，已另存为「{label(current.name)}」。
         </div>
       )}
       <div className="desktop-body">
-        <aside className="boards-panel" aria-label="画布列表">
-          <h2>画布</h2>
-          <p className="directory" title={context?.directory || ""}>
-            {context?.directory || "先选择一个本地或 OneDrive 文件夹"}
-          </p>
-          <button
-            disabled={busy || !context}
-            onClick={() => void operate(chooseDirectory)}
-          >
-            选择文件夹
-          </button>
-          <div className="button-row">
-            <button
-              disabled={busy || !context?.directory}
-              onClick={() => {
+        {!document && (
+          <div className="home-container" inert={busy || panel !== null}>
+            <BoardHome
+              files={files}
+              directory={context?.directory}
+              busy={busy}
+              ready={!!context}
+              onChooseDirectory={() => void operate(chooseDirectory)}
+              onNew={() => {
                 setName("");
                 setPanel("new");
               }}
-            >
-              新建
-            </button>
-            <button
-              disabled={busy || !context?.directory}
-              onClick={() => void operate(refresh)}
-            >
-              刷新
-            </button>
+              onRefresh={() => void operate(refresh)}
+              onImport={() =>
+                void operate(async () => {
+                  const content = await invoke<string | null>("import_board");
+                  if (content) {
+                    await create(content, `导入-${Date.now()}`);
+                  }
+                })
+              }
+              onTrash={() =>
+                void operate(async () => {
+                  await refreshTrash();
+                  setPanel("trash");
+                })
+              }
+              onOpen={(file) =>
+                void operate(async () => {
+                  await open(await repository.read(file.name));
+                })
+              }
+              onRename={(file) => {
+                setTarget(file);
+                setName(label(file.name));
+                setPanel("rename");
+              }}
+              onDelete={(file) => {
+                setTarget(file);
+                setPanel("delete");
+              }}
+            />
           </div>
-          <nav className="board-list">
-            {files.map((file) => (
-              <button
-                key={file.name}
-                title={file.name}
-                disabled={busy}
-                className={file.name === current?.name ? "selected" : ""}
-                onClick={() =>
-                  void operate(async () => {
-                    await flush();
-                    await open(await repository.read(file.name));
-                  })
-                }
-              >
-                {label(file.name)}
-              </button>
-            ))}
-          </nav>
-          {current && (
-            <div className="button-row">
-              <button
-                disabled={busy}
-                onClick={() => {
-                  setName(label(current.name));
-                  setPanel("rename");
-                }}
-              >
-                重命名
-              </button>
-              <button disabled={busy} onClick={() => setPanel("delete")}>
-                删除
-              </button>
-            </div>
-          )}
-          <button
-            disabled={busy || !context?.directory}
-            onClick={() =>
-              void operate(async () => {
-                await flush();
-                const content = await invoke<string | null>("import_board");
-                if (content) {
-                  await create(content, `导入-${Date.now()}`);
-                }
-              })
-            }
-          >
-            导入 .excalidraw
-          </button>
-          <button
-            disabled={busy || !context}
-            onClick={() =>
-              void operate(async () => {
-                setRecoveries(await invoke<Recovery[]>("list_recovery"));
-                setPanel("recovery");
-              })
-            }
-          >
-            恢复记录
-          </button>
-          <p className="local-note">
-            这里只确认本机保存。OneDrive 的云端同步状态请在 OneDrive 中查看。
-          </p>
-        </aside>
-        <main className="editor-area" inert={busy || panel !== null}>
-          {document ? (
+        )}
+        {document && (
+          <main className="editor-area" inert={busy || panel !== null}>
             <Excalidraw
               key={document.key}
               initialData={document.initialData}
@@ -450,18 +470,12 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
                 }
               }}
             />
-          ) : (
-            <div className="empty-state">
-              <h1>给想法一张画布</h1>
-              <p>选择文件夹，再新建或打开画布。</p>
-              <p>绘图文件和个人设置独立保存，替换应用不会主动清除它们。</p>
-            </div>
-          )}
-        </main>
+          </main>
+        )}
       </div>
       {busy && (
         <div className="busy-indicator" role="status">
-          正在处理，请稍候…
+          处理中…
         </div>
       )}
       {panel && (
@@ -474,6 +488,7 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
               {
                 settings: "个人设置",
                 recovery: "恢复画布",
+                trash: "回收站",
                 new: "新建画布",
                 rename: "重命名画布",
                 delete: "删除画布",
@@ -486,6 +501,7 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
                   {
                     settings: "个人设置",
                     recovery: "恢复画布",
+                    trash: "回收站",
                     new: "新建画布",
                     rename: "重命名画布",
                     delete: "删除画布",
@@ -503,19 +519,18 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
                   void operate(async () => {
                     if (panel === "new") {
                       await create();
-                    } else if (active.current) {
+                    } else if (target) {
                       await flush();
-                      const session = active.current.session;
+                      const board = await repository.read(target.name);
                       const newName = filename(name);
                       await repository.rename(
-                        session.name,
+                        board.name,
                         newName,
-                        session.revision,
+                        board.revision,
                       );
-                      session.name = newName;
-                      redraw((value) => value + 1);
                       await refresh();
                       setPanel(null);
+                      setTarget(null);
                     }
                   });
                 }}
@@ -529,7 +544,6 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
                     onChange={(event) => setName(event.target.value)}
                   />
                 </label>
-                <p>文件将保存为 .excalidraw，可用原版 Excalidraw 打开。</p>
                 <button type="submit" disabled={busy || !name.trim()}>
                   确认
                 </button>
@@ -537,31 +551,25 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
             )}
             {panel === "delete" && (
               <>
-                <p>
-                  删除「{label(current?.name || "")}
-                  」？应用会先保存本机恢复记录，再移除画布文件。OneDrive
-                  可能将删除同步到其他设备。
-                </p>
+                <p>将「{label(target?.name || "")}」移到回收站？</p>
                 <button
                   disabled={busy}
                   onClick={() =>
                     void operate(async () => {
                       await flush();
-                      const session = active.current?.session;
-                      if (!session) {
+                      if (!target) {
                         return;
                       }
-                      await repository.trash(session.name, session.revision);
-                      session.dispose();
-                      active.current = null;
-                      api.current = null;
-                      setDocument(null);
+                      const board = await repository.read(target.name);
+                      await repository.trash(board.name, board.revision);
                       setPanel(null);
+                      setTarget(null);
                       await refresh();
+                      await refreshTrash();
                     })
                   }
                 >
-                  确认删除（可从恢复记录找回）
+                  移到回收站
                 </button>
               </>
             )}
@@ -569,7 +577,7 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
               <>
                 {settingsInvalid && (
                   <div className="notice">
-                    已停用设置自动写入，以保护无法读取的原设置。
+                    设置损坏，已暂停写入。
                     <button
                       onClick={() => {
                         settingsWritable.current = true;
@@ -644,9 +652,6 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
                     }
                   />
                 </label>
-                <p>
-                  设置与绘图默认样式保存在本机。导出不包含文件夹路径、窗口信息或系统权限。
-                </p>
                 <div className="button-row">
                   <button
                     disabled={busy}
@@ -691,15 +696,22 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
                     导出设置
                   </button>
                 </div>
-                <small>本机数据目录：{context?.dataDirectory}</small>
+                <button
+                  disabled={busy}
+                  onClick={() =>
+                    void operate(async () => {
+                      setRecoveries(await invoke<Recovery[]>("list_recovery"));
+                      setPanel("recovery");
+                    })
+                  }
+                >
+                  历史备份
+                </button>
               </>
             )}
             {panel === "recovery" && (
               <>
-                <p>
-                  恢复会在当前文件夹中建立新画布，不覆盖现有文件。每张画布保留最近
-                  20 个不同状态；删除画布后恢复记录仍保留。
-                </p>
+                <p>恢复为新画板。</p>
                 {!context?.directory && <p>请先选择画布文件夹。</p>}
                 <div className="recovery-list">
                   {recoveries.length ? (
@@ -729,6 +741,46 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
                     ))
                   ) : (
                     <p>暂无恢复记录。</p>
+                  )}
+                </div>
+              </>
+            )}
+            {panel === "trash" && (
+              <>
+                <p>
+                  最多 10 个，删除 10 天后自动清理；超出上限清理最早删除的画板。
+                </p>
+                <div className="recovery-list">
+                  {trash.length ? (
+                    trash.map((entry) => (
+                      <div className="trash-entry" key={entry.id}>
+                        <div>
+                          <strong>{label(entry.name)}</strong>
+                          <span>
+                            {new Date(entry.deletedAt).toLocaleDateString()}{" "}
+                            删除
+                          </span>
+                        </div>
+                        <button
+                          disabled={busy || !context?.directory}
+                          onClick={() =>
+                            void operate(async () => {
+                              const board = await invoke<LoadedBoard>(
+                                "restore_trash",
+                                { id: entry.id },
+                              );
+                              await refresh();
+                              await refreshTrash();
+                              await open(board);
+                            })
+                          }
+                        >
+                          恢复
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p>回收站为空</p>
                   )}
                 </div>
               </>

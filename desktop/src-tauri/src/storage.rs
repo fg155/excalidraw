@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{fs, io::Write, path::{Path, PathBuf}, time::{SystemTime, UNIX_EPOCH}};
@@ -7,6 +7,14 @@ use uuid::Uuid;
 
 pub type Result<T> = std::result::Result<T, String>;
 const MAX_BYTES: usize = 100 * 1024 * 1024;
+const TRASH_LIMIT: usize = 10;
+const TRASH_TTL_MS: u64 = 10 * 24 * 60 * 60 * 1000;
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrashEntry { pub id: String, pub name: String, pub deleted_at: u64 }
+#[derive(Serialize, Deserialize)]
+struct TrashedBoard { name: String, deleted_at: u64, content: String }
 
 #[derive(Serialize)]
 pub struct BoardFile { pub name: String, pub modified: u64 }
@@ -61,7 +69,9 @@ impl Storage {
             let raw: String = serde_json::from_str(&text).map_err(io)?;
             Some(PathBuf::from(raw))
         } else { None };
-        Ok(Self { root, data })
+        let storage = Self { root, data };
+        storage.clean_trash_at(now())?;
+        Ok(storage)
     }
 
     pub fn select(&mut self, path: PathBuf) -> Result<()> {
@@ -179,8 +189,82 @@ impl Storage {
     pub fn trash(&self, name: &str, expected: &str) -> Result<()> {
         let current = self.read(name)?;
         if current.revision != expected { return Err("文件已被外部修改，请重新打开后删除".into()); }
-        self.backup(name, &current.content)?;
-        fs::remove_file(self.path(name)?).map_err(io)
+        let timestamp = now();
+        let id = format!("{:020}-{}.json", timestamp, Uuid::new_v4());
+        let folder = self.trash_root()?;
+        let record = TrashedBoard { name: name.into(), deleted_at: timestamp, content: current.content };
+        // Persist a complete recoverable copy before removing the board.
+        atomic_write(&folder.join(&id), &serde_json::to_string(&record).map_err(io)?)?;
+        fs::remove_file(self.path(name)?).map_err(io)?;
+        self.clean_trash_at(timestamp)
+    }
+
+    fn trash_root(&self) -> Result<PathBuf> {
+        let folder = self.data.join("trash");
+        fs::create_dir_all(&folder).map_err(io)?;
+        let data = self.data.canonicalize().map_err(io)?;
+        let folder = folder.canonicalize().map_err(io)?;
+        if folder.parent() != Some(data.as_path()) { return Err("无效的回收站目录".into()); }
+        Ok(folder)
+    }
+
+    fn trash_path(&self, id: &str) -> Result<PathBuf> {
+        if id.len() != 62 || !id.is_ascii() || !id.ends_with(".json") ||
+            !id[..20].bytes().all(|c|c.is_ascii_digit()) || id.as_bytes()[20] != b'-' ||
+            Uuid::parse_str(&id[21..57]).is_err() {
+            return Err("无效的回收站记录".into());
+        }
+        let root = self.trash_root()?;
+        let path = root.join(id);
+        let meta = fs::symlink_metadata(&path).map_err(io)?;
+        if !meta.is_file() || meta.file_type().is_symlink() || path.canonicalize().map_err(io)?.parent() != Some(root.as_path()) {
+            return Err("无效的回收站路径".into());
+        }
+        Ok(path)
+    }
+
+    fn trash_entries(&self) -> Result<Vec<TrashEntry>> {
+        let mut entries = Vec::new();
+        for item in fs::read_dir(self.trash_root()?).map_err(io)? {
+            let item = item.map_err(io)?;
+            let id = item.file_name().to_string_lossy().to_string();
+            // Only our UUID-named regular files can be read or pruned.
+            let Ok(path) = self.trash_path(&id) else { continue };
+            if fs::metadata(&path).map_err(io)?.len() > (MAX_BYTES * 2 + 1024) as u64 { return Err("回收站记录过大".into()); }
+            let record: TrashedBoard = serde_json::from_str(&fs::read_to_string(path).map_err(io)?).map_err(io)?;
+            entries.push(TrashEntry { id, name: record.name, deleted_at: record.deleted_at });
+        }
+        entries.sort_by(|a,b| b.deleted_at.cmp(&a.deleted_at).then(b.id.cmp(&a.id)));
+        Ok(entries)
+    }
+
+    fn clean_trash_at(&self, timestamp: u64) -> Result<()> {
+        for (index, entry) in self.trash_entries()?.into_iter().enumerate() {
+            if index >= TRASH_LIMIT || timestamp.saturating_sub(entry.deleted_at) >= TRASH_TTL_MS {
+                fs::remove_file(self.trash_path(&entry.id)?).map_err(io)?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn list_trash(&self) -> Result<Vec<TrashEntry>> {
+        self.clean_trash_at(now())?;
+        self.trash_entries()
+    }
+
+    pub fn restore_trash(&self, id: &str) -> Result<LoadedBoard> {
+        self.clean_trash_at(now())?;
+        let path = self.trash_path(id)?;
+        let record: TrashedBoard = serde_json::from_str(&fs::read_to_string(&path).map_err(io)?).map_err(io)?;
+        validate_board(&record.content)?;
+        valid_name(&record.name)?;
+        let name = if self.path(&record.name)?.exists() {
+            format!("{}-恢复-{}.excalidraw", record.name.trim_end_matches(".excalidraw").chars().take(24).collect::<String>(), &Uuid::new_v4().to_string()[..8])
+        } else { record.name };
+        let saved = self.save(&name, &record.content, None)?;
+        // A failed restore never removes the recoverable copy.
+        fs::remove_file(path).map_err(io)?;
+        Ok(LoadedBoard { name: saved.name, revision: saved.revision, content: record.content })
     }
 }
 
@@ -260,5 +344,70 @@ mod tests {
         assert!(copy.conflict);
         assert_eq!(s.read(&copy.name).unwrap().content,B);
         assert_eq!(fs::read_to_string(s.root.as_ref().unwrap().join("a.excalidraw")).unwrap(),"external invalid JSON");
+    }
+
+    fn seed_trash(s: &Storage, name: &str, deleted_at: u64) -> String {
+        let id = format!("{:020}-{}.json", deleted_at, Uuid::new_v4());
+        let record = TrashedBoard { name: name.into(), deleted_at, content: A.into() };
+        atomic_write(&s.trash_root().unwrap().join(&id), &serde_json::to_string(&record).unwrap()).unwrap();
+        id
+    }
+
+    #[test] fn trash_keeps_ten_newest_without_touching_boards_or_backups() {
+        let (_temp,s) = setup();
+        s.save("active.excalidraw", B, None).unwrap();
+        let timestamp = now();
+        for index in 0..12 { seed_trash(&s, &format!("{index}.excalidraw"), timestamp - 100 + index); }
+        let entries = s.list_trash().unwrap();
+        assert_eq!(entries.len(),10);
+        assert_eq!(entries.first().unwrap().name,"11.excalidraw");
+        assert_eq!(entries.last().unwrap().name,"2.excalidraw");
+        assert_eq!(s.read("active.excalidraw").unwrap().content,B);
+        assert!(fs::read_dir(s.data.join("recovery")).unwrap().count() > 0);
+    }
+
+    #[test] fn trash_expires_at_ten_days_and_on_restart() {
+        let (_temp,s) = setup();
+        let timestamp = now();
+        let id = seed_trash(&s,"expired.excalidraw", timestamp);
+        s.clean_trash_at(timestamp + TRASH_TTL_MS - 1).unwrap();
+        assert!(s.trash_path(&id).is_ok());
+        s.clean_trash_at(timestamp + TRASH_TTL_MS).unwrap();
+        assert!(s.trash_path(&id).is_err());
+        seed_trash(&s,"old.excalidraw", timestamp - TRASH_TTL_MS - 1);
+        seed_trash(&s,"recent.excalidraw", timestamp);
+        let reopened = Storage::new(s.data.clone()).unwrap();
+        assert_eq!(reopened.list_trash().unwrap().len(),1);
+        assert_eq!(reopened.list_trash().unwrap()[0].name,"recent.excalidraw");
+    }
+
+    #[test] fn trash_restore_never_overwrites_and_removes_only_after_success() {
+        let (temp,mut s) = setup();
+        let saved = s.save("drawing.excalidraw", A, None).unwrap();
+        s.trash(&saved.name,&saved.revision).unwrap();
+        let entries = s.list_trash().unwrap();
+        assert_eq!(entries.len(),1);
+        s.save("drawing.excalidraw", B, None).unwrap();
+        let restored = s.restore_trash(&entries[0].id).unwrap();
+        assert_ne!(restored.name,"drawing.excalidraw");
+        assert_eq!(restored.content,A);
+        assert_eq!(s.read("drawing.excalidraw").unwrap().content,B);
+        assert!(s.list_trash().unwrap().is_empty());
+        let id = seed_trash(&s,"retry.excalidraw",now());
+        let valid_root = s.root.clone();
+        s.root = Some(temp.path().join("unavailable"));
+        assert!(s.restore_trash(&id).is_err());
+        assert_eq!(s.list_trash().unwrap().len(),1);
+        s.root = valid_root;
+        assert_eq!(s.restore_trash(&id).unwrap().name,"retry.excalidraw");
+        assert!(s.list_trash().unwrap().is_empty());
+    }
+
+    #[test] fn trash_rejects_invalid_ids_and_keeps_unrelated_files() {
+        let (_temp,s) = setup();
+        for id in ["../settings.json", "bad.json", &"é".repeat(31)] { assert!(s.restore_trash(id).is_err()); }
+        atomic_write(&s.trash_root().unwrap().join("unrelated.json"),"keep").unwrap();
+        s.clean_trash_at(u64::MAX).unwrap();
+        assert_eq!(fs::read_to_string(s.trash_root().unwrap().join("unrelated.json")).unwrap(),"keep");
     }
 }

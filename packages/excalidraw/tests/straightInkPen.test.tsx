@@ -58,7 +58,13 @@ describe("straight ink pen input and rendered previews", () => {
     await render(
       <Excalidraw
         handleKeyboardGlobally
-        straightInk={{ version: 1, shift: true, hold: true, holdMs: 500 }}
+        straightInk={{
+          version: 1,
+          shift: true,
+          hold: true,
+          holdMs: 500,
+          smoothLines: true,
+        }}
       />,
     );
     UI.clickTool("freedraw");
@@ -122,6 +128,21 @@ describe("straight ink pen input and rendered previews", () => {
       expect(path).toEqual(paths[0]);
     }
     expect(line.polygon).toBe(false);
+  });
+
+  it("starts the ordinary line tool clean without changing other tool preferences", () => {
+    API.setAppState({ currentItemRoughness: 2 });
+    UI.clickTool("line");
+    down(20, 30);
+    move(220, 30);
+    up(220, 30);
+    expect(asLine().roughness).toBe(0);
+    expect(h.state.currentItemRoughness).toBe(2);
+    UI.clickTool("rectangle");
+    down(250, 50);
+    move(330, 100);
+    up(330, 100);
+    expect(h.elements[1].roughness).toBe(2);
   });
 
   it("keeps real pen pressure including a first sample of exactly 0.5", () => {

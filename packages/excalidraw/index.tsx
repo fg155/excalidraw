@@ -208,6 +208,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     <EditorJotaiProvider store={editorJotaiStore}>
       <InitializeApp langCode={langCode} theme={theme}>
         <App
+          straightInk={props.straightInk}
           onExport={onExport}
           className={className}
           ownerDocument={ownerDocument}

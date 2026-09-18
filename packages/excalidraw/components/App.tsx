@@ -420,6 +420,7 @@ import {
   isGridModeEnabled,
 } from "../snapping";
 import { Renderer } from "../scene/Renderer";
+import { StraightInk } from "../straightInk";
 import {
   type SetViewportOptions,
   getViewportForZoomWithScrollConstraints,
@@ -638,6 +639,7 @@ const gesture: Gesture = {
 };
 
 class App extends React.Component<AppProps, AppState> {
+  private straightInk = new StraightInk(this);
   canvas: AppClassProperties["canvas"];
   interactiveCanvas: AppClassProperties["interactiveCanvas"] = null;
   public sessionExportThemeOverride: AppState["theme"] | undefined;
@@ -3241,6 +3243,7 @@ class App extends React.Component<AppProps, AppState> {
   // Lifecycle
 
   private onBlur = withBatchedUpdates(() => {
+    this.straightInk.cancel();
     this.pan.setSpaceHeld(false);
     this.setState({
       isBindingEnabled: this.state.bindingPreference === "enabled",
@@ -3904,6 +3907,7 @@ class App extends React.Component<AppProps, AppState> {
   }
 
   public componentWillUnmount() {
+    this.straightInk.clear();
     // we're recreating the api object reference so that the
     // <ExcalidrawAPIContext.Provider/> picks up on it
     this.api = { ...this.api, isDestroyed: true };
@@ -4217,6 +4221,12 @@ class App extends React.Component<AppProps, AppState> {
       addEventListener(this.ownerWindow, EVENT.RESIZE, this.onResize, false),
       addEventListener(this.ownerWindow, EVENT.UNLOAD, this.onUnload, false),
       addEventListener(this.ownerWindow, EVENT.BLUR, this.onBlur, false),
+      addEventListener(
+        this.ownerWindow,
+        "pointercancel",
+        this.straightInk.cancel,
+        false,
+      ),
       addEventListener(
         this.excalidrawContainerRef.current,
         EVENT.WHEEL,
@@ -5525,6 +5535,9 @@ class App extends React.Component<AppProps, AppState> {
   // Input handling
   private onKeyDown = withBatchedUpdates(
     (event: React.KeyboardEvent | KeyboardEvent) => {
+      if (event.key === KEYS.ESCAPE) {
+        this.straightInk.cancel();
+      }
       if (!this.isInteractionEnabled()) {
         return;
       }
@@ -9973,6 +9986,8 @@ class App extends React.Component<AppProps, AppState> {
       pressures: simulatePressure ? [] : [event.pressure],
     });
 
+    this.straightInk.start(element, event.shiftKey);
+
     this.insertNewElement(element);
 
     this.setState((prevState) => {
@@ -11353,6 +11368,17 @@ class App extends React.Component<AppProps, AppState> {
         }
 
         if (newElement.type === "freedraw") {
+          if (
+            this.straightInk.move(
+              newElement,
+              pointFrom<LocalPoint>(
+                pointerCoords.x - newElement.x,
+                pointerCoords.y - newElement.y,
+              ),
+            )
+          ) {
+            return;
+          }
           const points = newElement.points;
           const dx = pointerCoords.x - newElement.x;
           const dy = pointerCoords.y - newElement.y;
@@ -11588,6 +11614,9 @@ class App extends React.Component<AppProps, AppState> {
       const elementsMap = this.scene.getNonDeletedElementsMap();
 
       this.removePointer(childEvent);
+      if (childEvent.type !== "pointerup") {
+        this.straightInk.cancel();
+      }
       pointerDownState.drag.blockDragging = false;
       if (pointerDownState.eventListeners.onMove) {
         pointerDownState.eventListeners.onMove.flush();
@@ -11848,6 +11877,35 @@ class App extends React.Component<AppProps, AppState> {
           childEvent,
           this.state,
         );
+
+        const line = this.straightInk.finish(
+          newElement,
+          pointFrom<LocalPoint>(
+            pointerCoords.x - newElement.x,
+            pointerCoords.y - newElement.y,
+          ),
+        );
+        if (line) {
+          const tooSmall =
+            Math.hypot(line.points[1][0], line.points[1][1]) *
+              this.state.zoom.value <
+            2;
+          this.syncActionResult({
+            elements: this.scene
+              .getElementsIncludingDeleted()
+              .flatMap<ExcalidrawElement>((el) =>
+                el.id === newElement.id ? (tooSmall ? [] : [line]) : [el],
+              ),
+            appState: {
+              newElement: null,
+              multiElement: null,
+              selectedLinearElement: null,
+              cursorButton: "up",
+            },
+            captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+          });
+          return;
+        }
 
         const points = newElement.points;
         let dx = pointerCoords.x - newElement.x;

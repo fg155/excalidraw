@@ -1,6 +1,17 @@
-# Implementation checkpoint — smooth straight-ink and pen regression fix
+# Implementation checkpoint — board gallery, recycle bin and clean line tool
 
 This remains a development preview. The user manually pushed the CLI forwarding correction, supplied a successful Windows x64 Actions screenshot (including native build and artifact upload), and ran the app. The new correction below is local only and still needs a new user-pushed cloud build and physical tablet acceptance. Resume here rather than starting again.
+
+## Latest gallery / recycle-bin revision (2026-09-18)
+
+- User confirmed Shift/hold drawing is fixed, requested ordinary line-tool clean curves, replacing the board sidebar with a startup gallery and thumbnails, a top-left return button, a 10-item/10-day recycle bin, and removal of redundant helper prose.
+- Ordinary new desktop lines opt into roughness 0 via `straightInk.smoothLines`. Other shapes, upstream consumers and existing drawings retain their styles; selected lines can still be manually restyled.
+- Added `BoardHome` and `BoardThumbnail`: actual read-only scene/image export to bounded PNG previews; lazy, serialized thumbnail work avoids decoding the whole library at once. A broken preview does not block other boards. Editor mounts only after selecting a board. Return-home flushes document and settings first; failed save keeps the editor open. Rename/delete now operate on gallery cards.
+- Removed decorative empty-state text, sidebar synchronization disclaimer and redundant form/settings prose. Retained concise errors, save state, conflict notice and deletion/retention information.
+- Added Rust `trash` storage separate from legacy recovery: atomic complete copy before deletion, capacity 10 newest, expiry at 10 days, UUID/path confinement, restore without overwrite, record removal only after successful file save. Prunes on startup/list/delete/restore plus an app-owned expiry timer. No OS background job; when closed, expiry is enforced next launch. Existing auto-backups remain under Settings > 历史备份, not silently migrated or deleted.
+- Device clarified by user: Huion L610, no touch; side button toggles pen/eraser (not hold). User says official web editor supports it. Do not force a driver remapping; physical desktop compatibility remains to be verified.
+- Checks for this revision: 112 JS/React tests passed with 1 existing upstream todo; 11 Rust storage tests passed offline. Root and desktop typechecks, targeted lint and frontend production build passed. Browser screenshot verified gallery layout and real content thumbnails using a workspace-only mock native backend. No user files were used in preview, no native build/system installation/push performed. Native IPC integration and executable require the next user-pushed Windows cloud build.
+- Test helpers: `work/preview-desktop.mjs` and `work/preview-native.mjs` outside the repo build a mock-only browser preview into `work/preview-dist`; never package this preview. Production `desktop/dist` is separately built from unmodified Tauri IPC imports.
 
 ## Latest straight-ink / tablet correction (2026-09-18)
 

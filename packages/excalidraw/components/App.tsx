@@ -10355,7 +10355,10 @@ class App extends React.Component<AppProps, AppState> {
               fillStyle: this.state.currentItemFillStyle,
               strokeWidth: this.getCurrentItemStrokeWidth(elementType),
               strokeStyle: this.state.currentItemStrokeStyle,
-              roughness: this.state.currentItemRoughness,
+              roughness:
+                elementType === "line" && this.props.straightInk?.smoothLines
+                  ? 0
+                  : this.state.currentItemRoughness,
               opacity: this.state.currentItemOpacity,
               roundness:
                 this.state.currentItemRoundness === "round"

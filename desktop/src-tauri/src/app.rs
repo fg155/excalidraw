@@ -42,6 +42,10 @@ fn backup_board(name: String, content: String, state: State<AppStorage>) -> Resu
 fn rename_board(name: String, new_name: String, revision: String, state: State<AppStorage>) -> Result<()> { state.0.lock().map_err(|e|e.to_string())?.rename(&name,&new_name,&revision) }
 #[tauri::command]
 fn trash_board(name: String, revision: String, state: State<AppStorage>) -> Result<()> { state.0.lock().map_err(|e|e.to_string())?.trash(&name,&revision) }
+#[tauri::command]
+fn list_trash(state: State<AppStorage>) -> Result<Vec<storage::TrashEntry>> { state.0.lock().map_err(|e|e.to_string())?.list_trash() }
+#[tauri::command]
+fn restore_trash(id: String, state: State<AppStorage>) -> Result<LoadedBoard> { state.0.lock().map_err(|e|e.to_string())?.restore_trash(&id) }
 
 fn settings_json(content: &str) -> Result<Value> {
     if content.len() > 128 * 1024 { return Err("设置文件过大".into()); }
@@ -141,7 +145,7 @@ pub fn run() {
             app.manage(AppStorage(Mutex::new(storage)));
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_context,choose_directory,list_boards,read_board,save_board,backup_board,rename_board,trash_board,save_settings,import_settings,export_settings,import_board,list_recovery,read_recovery])
+        .invoke_handler(tauri::generate_handler![get_context,choose_directory,list_boards,read_board,save_board,backup_board,rename_board,trash_board,list_trash,restore_trash,save_settings,import_settings,export_settings,import_board,list_recovery,read_recovery])
         .run(tauri::generate_context!())
         .expect("Failed to run Excalidraw Personal");
 }

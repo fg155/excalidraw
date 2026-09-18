@@ -27,10 +27,12 @@ C:\Users\fg155\Documents\Codex\2026-09-18\xi\outputs\excalidraw
 ```powershell
 $repo = 'C:\Users\fg155\Documents\Codex\2026-09-18\xi\outputs\excalidraw'
 $portableGit = 'C:\Users\fg155\Documents\Codex\2026-09-18\xi\work\mingit'
-& "$portableGit\cmd\git.exe" "--exec-path=$portableGit\mingw64\bin" -C $repo -c http.sslBackend=openssl push -u origin feature/desktop-straight-ink
+& "$portableGit\cmd\git.exe" "--exec-path=$portableGit\mingw64\bin" -c "safe.directory=$repo" -C $repo -c http.sslBackend=openssl push -u origin feature/desktop-straight-ink
 ```
 
 这会把已提交的代码推到你自己的 `fg155/excalidraw` 仓库的开发分支，同时触发 Windows 构建。不会推到官方仓库，不会覆盖 master，不会发布正式 Release。
+
+`safe.directory` 只在这一次命令中信任该目录，用于处理隔离环境创建仓库与本机用户不同的所有权检查；不修改全局 Git 设置。
 
 如果首次推送弹出 GitHub 登录，请由你自己完成。如果出现权限、认证或网络错误，把错误文字发给助手；不要把密码、令牌或带有凭证的 URL 发到聊天里，不要为了推送关闭 TLS 证书校验，也不要使用强制推送。
 

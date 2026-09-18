@@ -1,6 +1,14 @@
 # Implementation checkpoint — frontend/save-flow milestone
 
-This is unfinished work, not a runnable desktop release. Local work is being committed for the user's manual first cloud-build push. No executable or successful cloud run yet. Resume here rather than starting again.
+This is unfinished work, not a runnable desktop release. User manually pushed the preview commits and supplied the first cloud failure. No executable or successful cloud run yet. Resume here rather than starting again.
+
+## First cloud-build failure and correction
+
+- User's push created `origin/feature/desktop-straight-ink` successfully. Git ownership checking in their shell required a command-scoped `-c "safe.directory=$repo"`; this is now included in the cloud-build guide, without global trust changes.
+- The first Windows run reached `Build native Windows executable and embedded frontend` and failed immediately: nested Yarn 1 scripts stripped the literal `--`, so Tauri rejected Cargo's `--locked` argument. This was a command forwarding error, before native application compilation.
+- Corrected workflow to run `node ../node_modules/@tauri-apps/cli/tauri.js build --target x86_64-pc-windows-msvc --features custom-protocol --no-bundle --ci -- --locked` directly with working-directory `desktop`.
+- Verified the actual command extracted from workflow YAML against the installed Tauri CLI: argument parsing now passes and execution reaches `cargo metadata`. Local Cargo is not on PATH and full MSVC prerequisites remain absent, so native build success must still be established in the next cloud run.
+- This correction is committed locally for the user to push. Do not merely rerun the previous GitHub job: it uses the old commit. Do not push on the user's behalf.
 
 ## Latest native-build prerequisite check (2026-09-18)
 

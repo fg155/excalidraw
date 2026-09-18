@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { exportToCanvas, loadFromBlob } from "@excalidraw/excalidraw";
 import { getNonDeletedElements } from "@excalidraw/element";
+import { renderPaperGrid } from "@excalidraw/excalidraw/paperGrid";
 
 import { repository } from "./repository";
 
@@ -11,7 +12,10 @@ import type { BoardFile } from "./repository";
 let thumbnailQueue: Promise<unknown> = Promise.resolve();
 
 /** Export read-only scene data, never mount a second editor or persist normalization. */
-export async function renderThumbnail(content: string) {
+export async function renderThumbnail(
+  content: string,
+  ownerDocument: Document,
+) {
   const data = await loadFromBlob(
     new Blob([content], { type: "application/json" }),
     null,
@@ -19,7 +23,20 @@ export async function renderThumbnail(content: string) {
   );
   const elements = getNonDeletedElements(data.elements || []);
   if (!elements.length) {
-    return null;
+    const canvas = ownerDocument.createElement("canvas");
+    canvas.width = 480;
+    canvas.height = 280;
+    const context = canvas.getContext("2d")!;
+    const background = data.appState?.viewBackgroundColor || "#ffffff";
+    context.fillStyle = background;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    renderPaperGrid(context, {
+      style: data.appState?.paperGrid || "none",
+      background,
+      width: canvas.width,
+      height: canvas.height,
+    });
+    return canvas.toDataURL("image/png");
   }
   const canvas = await exportToCanvas({
     elements,
@@ -65,6 +82,7 @@ export function BoardThumbnail({ file }: { file: BoardFile }) {
       return;
     }
     let cancelled = false;
+    const ownerDocument = host.current!.ownerDocument;
     setPreview(null);
     setFailed(false);
     const job = thumbnailQueue.then(async () => {
@@ -72,7 +90,7 @@ export function BoardThumbnail({ file }: { file: BoardFile }) {
         return null;
       }
       const board = await repository.read(file.name);
-      return cancelled ? null : renderThumbnail(board.content);
+      return cancelled ? null : renderThumbnail(board.content, ownerDocument);
     });
     thumbnailQueue = job.catch(() => null);
     void job

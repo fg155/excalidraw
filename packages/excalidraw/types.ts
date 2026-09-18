@@ -210,6 +210,7 @@ export type StaticCanvasAppState = Readonly<
     selectedElementsAreBeingDragged: AppState["selectedElementsAreBeingDragged"];
     gridSize: AppState["gridSize"];
     gridStep: AppState["gridStep"];
+    paperGrid: AppState["paperGrid"];
     frameRendering: AppState["frameRendering"];
     currentHoveredFontFamily: AppState["currentHoveredFontFamily"];
     hoveredElementIds: AppState["hoveredElementIds"];
@@ -263,6 +264,7 @@ export type ObservedAppState = ObservedStandaloneAppState &
 export type ObservedStandaloneAppState = {
   name: AppState["name"];
   viewBackgroundColor: AppState["viewBackgroundColor"];
+  paperGrid: AppState["paperGrid"];
 };
 
 export type ObservedElementsAppState = {
@@ -503,6 +505,7 @@ export interface AppState {
   /** grid cell px size */
   gridSize: number;
   gridStep: number;
+  paperGrid: import("./paperGrid").PaperGridStyle;
   gridModeEnabled: boolean;
   viewModeEnabled: boolean;
 

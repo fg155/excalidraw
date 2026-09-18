@@ -42,6 +42,8 @@ import {
   getLinkHandleFromCoords,
 } from "../components/hyperlink/helpers";
 
+import { renderPaperGrid } from "../paperGrid";
+
 import {
   bootstrapCanvas,
   getNormalizedCanvasDimensions,
@@ -310,6 +312,18 @@ const _renderStaticScene = ({
   context.scale(appState.zoom.value, appState.zoom.value);
 
   // Grid
+  if (appState.viewBackgroundColor) {
+    renderPaperGrid(context, {
+      style: appState.paperGrid,
+      background: appState.viewBackgroundColor,
+      dark: appState.theme === THEME.DARK,
+      width: normalizedWidth / appState.zoom.value,
+      height: normalizedHeight / appState.zoom.value,
+      scrollX: appState.scrollX,
+      scrollY: appState.scrollY,
+      zoom: appState.zoom.value,
+    });
+  }
   if (renderGrid) {
     strokeGrid(
       context,

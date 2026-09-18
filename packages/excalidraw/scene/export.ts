@@ -49,6 +49,8 @@ import type {
   NonDeletedSceneElementsMap,
 } from "@excalidraw/element/types";
 
+import { appendPaperGridSvg } from "../paperGrid";
+
 import { getDefaultAppState } from "../appState";
 import { base64ToString, decode, encode, stringToBase64 } from "../data/encode";
 import { serializeAsJSON } from "../data/json";
@@ -299,6 +301,7 @@ export const exportToSvg = async (
     viewBackgroundColor: string;
     exportWithDarkMode?: boolean;
     exportEmbedScene?: boolean;
+    paperGrid?: AppState["paperGrid"];
     frameRendering?: AppState["frameRendering"];
   },
   files: BinaryFiles | null,
@@ -466,6 +469,16 @@ export const exportToSvg = async (
       applyDarkModeFilter(viewBackgroundColor, exportWithDarkMode),
     );
     svgRoot.appendChild(rect);
+    appendPaperGridSvg(
+      svgRoot,
+      appState.paperGrid || "none",
+      viewBackgroundColor,
+      width,
+      height,
+      offsetX,
+      offsetY,
+      exportWithDarkMode,
+    );
   }
 
   // ---------------------------------------------------------------------------

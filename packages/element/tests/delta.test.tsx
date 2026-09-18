@@ -623,6 +623,7 @@ describe("AppStateDelta", () => {
 
       const commonAppState = {
         viewBackgroundColor: "#ffffff",
+        paperGrid: "none" as const,
         selectedElementIds: {},
         selectedGroupIds: {},
         editingGroupId: null,
@@ -667,6 +668,7 @@ describe("AppStateDelta", () => {
       const commonAppState = {
         name: "",
         viewBackgroundColor: "#ffffff",
+        paperGrid: "none" as const,
         selectedGroupIds: {},
         editingGroupId: null,
         croppingElementId: null,
@@ -713,6 +715,7 @@ describe("AppStateDelta", () => {
       const commonAppState = {
         name: "",
         viewBackgroundColor: "#ffffff",
+        paperGrid: "none" as const,
         selectedElementIds: {},
         editingGroupId: null,
         croppingElementId: null,

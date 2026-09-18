@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { pointFrom } from "@excalidraw/math";
 import {
   act,
   fireEvent,
@@ -119,6 +120,56 @@ async function openExisting() {
 }
 
 describe("desktop shell with real editor and mocked native IPC", () => {
+  it("saves paper per board, supports undo, and leaves drawing and snapping alone", async () => {
+    mount();
+    await openExisting();
+    API.setElements([
+      API.createElement({
+        type: "freedraw",
+        points: [pointFrom(0, 0), pointFrom(30, 30)],
+      }),
+    ]);
+    const before = JSON.stringify(window.h.elements);
+    fireEvent.click(screen.getByRole("button", { name: "背景" }));
+    fireEvent.click(screen.getByRole("button", { name: "浅黄" }));
+    fireEvent.click(screen.getByRole("button", { name: "三角形" }));
+    expect(window.h.state.paperGrid).toBe("triangle");
+    expect(window.h.state.viewBackgroundColor).toBe("#fff0a6");
+    expect(window.h.state.gridModeEnabled).toBe(false);
+    expect(JSON.stringify(window.h.elements)).toBe(before);
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "关闭" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "撤销" }));
+    expect(window.h.state.paperGrid).toBe("none");
+    fireEvent.click(screen.getByRole("button", { name: "重做" }));
+    expect(window.h.state.paperGrid).toBe("triangle");
+    fireEvent.click(screen.getByRole("button", { name: "返回画板首页" }));
+    await screen.findByRole("main", { name: "画板首页" });
+    const saved = JSON.parse(boards.get("existing.excalidraw")!.content);
+    expect(saved.appState.paperGrid).toBe("triangle");
+    expect(saved.appState.viewBackgroundColor).toBe("#fff0a6");
+    await openExisting();
+    expect(window.h.state.paperGrid).toBe("triangle");
+    fireEvent.click(screen.getByRole("button", { name: "背景" }));
+    expect(screen.getByRole("button", { name: "三角形" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "关闭" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "返回画板首页" }));
+    await screen.findByRole("main", { name: "画板首页" });
+    fireEvent.click(screen.getByRole("button", { name: "新建画板" }));
+    fireEvent.change(screen.getByLabelText("画布名称"), {
+      target: { value: "plain" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "确认" }));
+    await waitFor(() => expect(window.h.state.paperGrid).toBe("none"));
+    expect(window.h.state.viewBackgroundColor).toBe("#ffffff");
+  });
+
   it("starts on the gallery and mounts no editor until a board is selected", async () => {
     mount();
     await screen.findByRole("button", { name: "existing" });

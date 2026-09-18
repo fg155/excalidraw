@@ -104,6 +104,8 @@ import type {
 
 import type { MarkOptional, Mutable } from "@excalidraw/common/utility-types";
 
+import { normalizePaperGrid } from "../paperGrid";
+
 import { getDefaultAppState } from "../appState";
 
 import {
@@ -1306,6 +1308,7 @@ export const restoreAppState = (
   return {
     ...nextAppState,
     cursorButton: localAppState?.cursorButton || "up",
+    paperGrid: normalizePaperGrid(nextAppState.paperGrid),
     // reset on fresh restore so as to hide the UI button if penMode not active
     penDetected:
       localAppState?.penDetected ??

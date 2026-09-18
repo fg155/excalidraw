@@ -588,6 +588,7 @@ export const convertToShape = (
         strokeWidth: getStrokeWidthByKey(
           recognizedShape.type,
           appState.currentItemStrokeWidthKey,
+          appState.currentItemCustomStrokeWidth,
         ),
       }) as NonDeletedRecognizedShapeElement;
     }
@@ -633,6 +634,7 @@ export const convertToShape = (
           strokeWidth: getStrokeWidthByKey(
             recognizedShape.type,
             appState.currentItemStrokeWidthKey,
+            appState.currentItemCustomStrokeWidth,
           ),
         });
 
@@ -671,6 +673,7 @@ export const convertToShape = (
         strokeWidth: getStrokeWidthByKey(
           recognizedShape.type,
           appState.currentItemStrokeWidthKey,
+          appState.currentItemCustomStrokeWidth,
         ),
       });
 
@@ -711,6 +714,7 @@ export const convertToShape = (
         strokeWidth: getStrokeWidthByKey(
           recognizedShape.type,
           appState.currentItemStrokeWidthKey,
+          appState.currentItemCustomStrokeWidth,
         ),
       });
 

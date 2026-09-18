@@ -1,4 +1,4 @@
-import { newLinearElement } from "@excalidraw/element";
+import { newLinearElement, getFreedrawStrokeWidth } from "@excalidraw/element";
 import { pointFrom } from "@excalidraw/math";
 
 import type { LocalPoint } from "@excalidraw/math";
@@ -11,6 +11,27 @@ import type {
 } from "@excalidraw/element/types";
 
 import type App from "./components/App";
+
+/** Distance weighting avoids a pause's repeated pressure samples dominating a line. */
+export const getStraightInkWidth = (element: ExcalidrawFreeDrawElement) => {
+  let total = 0;
+  let length = 0;
+  for (let i = 1; i < element.points.length; i++) {
+    const distance = Math.hypot(
+      element.points[i][0] - element.points[i - 1][0],
+      element.points[i][1] - element.points[i - 1][1],
+    );
+    total +=
+      (distance *
+        (getFreedrawStrokeWidth(element, element.pressures[i - 1]) +
+          getFreedrawStrokeWidth(element, element.pressures[i]))) /
+      2;
+    length += distance;
+  }
+  return length
+    ? total / length
+    : getFreedrawStrokeWidth(element, element.pressures[0]);
+};
 
 /** Screen-space tolerances keep the gesture consistent at different zooms. */
 export const isNearlyStraight = (
@@ -48,6 +69,12 @@ export class StraightInk {
     timer: number | null;
     pointerId: number;
     pointerType: string;
+    source: ExcalidrawFreeDrawElement;
+    trackPressure: boolean;
+    widthTotal: number;
+    distance: number;
+    lastPoint: LocalPoint;
+    width: number | null;
   } | null = null;
 
   constructor(private app: App) {}
@@ -66,6 +93,12 @@ export class StraightInk {
         timer: null,
         pointerId: event.pointerId,
         pointerType: event.pointerType,
+        source: element,
+        trackPressure: !!(event.shiftKey && config.shift),
+        widthTotal: 0,
+        distance: 0,
+        lastPoint: pointFrom<LocalPoint>(0, 0),
+        width: null,
       };
     }
   }
@@ -107,7 +140,11 @@ export class StraightInk {
   };
 
   /** Returns true when the normal freehand point append should be skipped. */
-  move(element: NonDeleted<ExcalidrawElement>, point: LocalPoint) {
+  move(
+    element: NonDeleted<ExcalidrawElement>,
+    point: LocalPoint,
+    pressure = 0.5,
+  ) {
     const gesture = this.gesture;
     if (
       !gesture ||
@@ -117,6 +154,19 @@ export class StraightInk {
       return false;
     }
     if (gesture.straight) {
+      if (gesture.trackPressure) {
+        const distance = Math.hypot(
+          point[0] - gesture.lastPoint[0],
+          point[1] - gesture.lastPoint[1],
+        );
+        gesture.widthTotal +=
+          distance * getFreedrawStrokeWidth(gesture.source, pressure);
+        gesture.distance += distance;
+        gesture.lastPoint = point;
+        gesture.width = gesture.distance
+          ? gesture.widthTotal / gesture.distance
+          : getFreedrawStrokeWidth(gesture.source, pressure);
+      }
       this.preview(element, point);
       return true;
     }
@@ -165,6 +215,7 @@ export class StraightInk {
     if (element.type === "line") {
       this.app.scene.mutateElement(element, {
         points: [pointFrom<LocalPoint>(0, 0), point],
+        strokeWidth: this.gesture?.width ?? element.strokeWidth,
       });
       this.app.setState({ newElement: element });
     } else {
@@ -203,6 +254,10 @@ export class StraightInk {
       roundness: null,
       // Only converted strokes use the clean style; ordinary pen preferences stay intact.
       roughness: 0,
+      strokeWidth:
+        element.type === "freedraw"
+          ? this.gesture?.width ?? getStraightInkWidth(element)
+          : element.strokeWidth,
       polygon: false,
     });
     return {

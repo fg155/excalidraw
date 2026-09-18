@@ -32,6 +32,7 @@ export class DrawShapeTrail implements Trail {
           getStrokeWidthByKey(
             "line",
             this.app.state.currentItemStrokeWidthKey,
+            this.app.state.currentItemCustomStrokeWidth,
           ) *
             0.65 *
             this.app.state.zoom.value,

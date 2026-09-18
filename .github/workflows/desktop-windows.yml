@@ -53,7 +53,7 @@ jobs:
 
       - name: Test desktop save flows and drawing gestures
         run: >-
-          yarn vitest run desktop/src/App.test.tsx desktop/src/session.test.ts desktop/src/settings.test.ts packages/excalidraw/tests/paperGrid.test.ts packages/excalidraw/tests/straightInk.test.ts packages/excalidraw/tests/straightInkInteraction.test.tsx packages/excalidraw/tests/straightInkPen.test.tsx packages/excalidraw/tests/freedrawMode.test.tsx packages/element/tests/delta.test.tsx
+          yarn vitest run desktop/src/App.test.tsx desktop/src/session.test.ts desktop/src/settings.test.ts packages/excalidraw/tests/paperGrid.test.ts packages/excalidraw/tests/straightInk.test.ts packages/excalidraw/tests/straightInkInteraction.test.tsx packages/excalidraw/tests/straightInkPen.test.tsx packages/excalidraw/tests/freedrawMode.test.tsx packages/excalidraw/tests/strokeWidth.test.tsx packages/excalidraw/tests/imageEraser.test.tsx packages/excalidraw/actions/actionProperties.test.tsx packages/element/tests/delta.test.tsx
 
 
       - name: Set up MSVC Rust (on the temporary GitHub runner only)

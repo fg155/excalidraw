@@ -1195,6 +1195,30 @@ const CONSTANT_WIDTH_FREEDRAW = {
   SIZE_FACTOR: 1.4,
 } as const;
 
+/** Full visible diameter, not the schema's narrower strokeWidth parameter. */
+export const getFreedrawStrokeWidth = (
+  element: ExcalidrawFreeDrawElement,
+  pressure = 0.5,
+) => {
+  if (element.strokeOptions?.variability === "constant") {
+    // LaserPointer's size is a radius.
+    return element.strokeWidth * CONSTANT_WIDTH_FREEDRAW.SIZE_FACTOR * 2;
+  }
+  const p =
+    element.simulatePressure || !Number.isFinite(pressure)
+      ? 0.5
+      : Math.max(0, Math.min(1, pressure));
+  // Same radius/easing formula as perfect-freehand's variable outline.
+  return (
+    2 *
+    element.strokeWidth *
+    VARIABLE_WIDTH_FREEDRAW.SIZE_FACTOR *
+    Math.sin(
+      ((0.5 - VARIABLE_WIDTH_FREEDRAW.THINNING * (0.5 - p)) * Math.PI) / 2,
+    )
+  );
+};
+
 const getFreedrawStreamline = (element: ExcalidrawFreeDrawElement) =>
   element.strokeOptions?.streamline ?? DEFAULT_STROKE_STREAMLINE;
 

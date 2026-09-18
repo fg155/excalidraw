@@ -218,6 +218,8 @@ export class API {
     strokeOptions?: T extends "freedraw"
       ? ExcalidrawFreeDrawElement["strokeOptions"]
       : never;
+    simulatePressure?: T extends "freedraw" ? boolean : never;
+    pressures?: T extends "freedraw" ? ExcalidrawFreeDrawElement["pressures"] : never;
     locked?: boolean;
     fileId?: T extends "image" ? string : never;
     scale?: T extends "image" ? ExcalidrawImageElement["scale"] : never;
@@ -289,7 +291,7 @@ export class API {
       fillStyle: rest.fillStyle ?? appState.currentItemFillStyle,
       strokeWidth:
         rest.strokeWidth ??
-        getStrokeWidthByKey(type, appState.currentItemStrokeWidthKey),
+        getStrokeWidthByKey(type, appState.currentItemStrokeWidthKey, appState.currentItemCustomStrokeWidth),
       strokeStyle: rest.strokeStyle ?? appState.currentItemStrokeStyle,
       roundness: (
         rest.roundness === undefined
@@ -356,7 +358,8 @@ export class API {
       case "freedraw":
         element = newFreeDrawElement({
           type: type as "freedraw",
-          simulatePressure: true,
+          simulatePressure: rest.simulatePressure ?? true,
+          pressures: rest.pressures ?? [],
           points: rest.points,
           strokeOptions: rest.strokeOptions,
           ...base,

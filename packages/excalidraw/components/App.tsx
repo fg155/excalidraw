@@ -10497,6 +10497,7 @@ class App extends React.Component<AppProps, AppState> {
     return getStrokeWidthByKey(
       elementType,
       this.state.currentItemStrokeWidthKey,
+      this.state.currentItemCustomStrokeWidth,
     );
   }
 
@@ -11393,6 +11394,7 @@ class App extends React.Component<AppProps, AppState> {
               pointerCoords.x - newElement.x,
               pointerCoords.y - newElement.y,
             ),
+            event.pressure,
           )
         ) {
           return;
@@ -12443,9 +12445,11 @@ class App extends React.Component<AppProps, AppState> {
             scenePointer.x,
             scenePointer.y,
           );
-          hitElements.forEach((hitElement) =>
-            this.elementsPendingErasure.add(hitElement.id),
-          );
+          hitElements.forEach((hitElement) => {
+            if (!isImageElement(hitElement)) {
+              this.elementsPendingErasure.add(hitElement.id);
+            }
+          });
         }
         this.eraseElements();
         return;
@@ -12797,6 +12801,11 @@ class App extends React.Component<AppProps, AppState> {
 
   private eraseElements = () => {
     let didChange = false;
+    this.elementsPendingErasure = new Set(
+      [...this.elementsPendingErasure].filter(
+        (id) => !isImageElement(this.scene.getElement(id)),
+      ),
+    );
 
     // Binding is double accounted on both elements and if one of them is
     // deleted, the binding should be removed
@@ -12859,6 +12868,14 @@ class App extends React.Component<AppProps, AppState> {
     });
 
     const elements = this.scene.getElementsIncludingDeleted().map((ele) => {
+      if (isImageElement(ele)) {
+        // Erasing a frame must not erase its images or leave them in a deleted frame.
+        if (ele.frameId && this.elementsPendingErasure.has(ele.frameId)) {
+          didChange = true;
+          return newElementWith(ele, { frameId: null });
+        }
+        return ele;
+      }
       if (
         this.elementsPendingErasure.has(ele.id) ||
         (ele.frameId && this.elementsPendingErasure.has(ele.frameId)) ||

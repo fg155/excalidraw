@@ -287,6 +287,7 @@ export const actionWrapTextInContainer = register({
           strokeWidth: getStrokeWidthByKey(
             "rectangle",
             appState.currentItemStrokeWidthKey,
+            appState.currentItemCustomStrokeWidth,
           ),
           strokeStyle: appState.currentItemStrokeStyle,
           roundness:

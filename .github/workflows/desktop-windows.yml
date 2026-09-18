@@ -69,7 +69,10 @@ jobs:
         run: yarn --cwd desktop icons
 
       - name: Build native Windows executable and embedded frontend
-        run: yarn desktop:tauri build --target x86_64-pc-windows-msvc --features custom-protocol --no-bundle --ci -- --locked
+        working-directory: desktop
+        # Yarn 1 consumes the argument separator when scripts are nested.
+        # Invoke the CLI directly so Cargo receives --locked after the literal --.
+        run: node ../node_modules/@tauri-apps/cli/tauri.js build --target x86_64-pc-windows-msvc --features custom-protocol --no-bundle --ci -- --locked
 
       - name: Stage portable application folder
         run: ./desktop/scripts/package-windows.ps1

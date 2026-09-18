@@ -1,0 +1,83 @@
+name: Desktop Windows preview
+
+# Bootstrap from the development branch without merging unfinished work to master.
+# workflow_dispatch becomes available in the UI once this file is on the default branch.
+on:
+  push:
+    branches:
+      - feature/desktop-straight-ink
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Test and build Windows x64
+    runs-on: windows-2022
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      HUSKY: "0"
+      CARGO_TERM_COLOR: always
+      # Avoid requiring a separate Visual C++ redistributable for our executable.
+      RUSTFLAGS: -C target-feature=+crt-static
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Set up Yarn (on the temporary GitHub runner only)
+        run: npm install --global --force yarn@1.22.22
+
+      - name: Install locked JavaScript dependencies
+        run: yarn install --frozen-lockfile --non-interactive
+
+      - name: Typecheck
+        run: |
+          yarn tsc --noEmit --pretty false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          yarn --cwd desktop typecheck
+
+      - name: Test desktop save flows and drawing gestures
+        run: >-
+          yarn vitest run desktop/src/App.test.tsx desktop/src/session.test.ts desktop/src/settings.test.ts packages/excalidraw/tests/straightInk.test.ts packages/excalidraw/tests/straightInkInteraction.test.tsx packages/excalidraw/tests/freedrawMode.test.tsx
+
+
+      - name: Set up MSVC Rust (on the temporary GitHub runner only)
+        run: |
+          rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal --no-self-update
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup default stable-x86_64-pc-windows-msvc
+
+      - name: Test native storage
+        run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --no-default-features
+
+      - name: Generate platform icons from the existing project artwork
+        run: yarn --cwd desktop icons
+
+      - name: Build native Windows executable and embedded frontend
+        run: yarn desktop:tauri build --target x86_64-pc-windows-msvc --features custom-protocol --no-bundle --ci -- --locked
+
+      - name: Stage portable application folder
+        run: ./desktop/scripts/package-windows.ps1
+
+      - name: Upload Windows preview (not a public release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Excalidraw-Personal-Windows-x64-${{ github.run_number }}
+          path: desktop/artifacts/Excalidraw-Personal-Windows-x64/
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,261 @@
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+.desktop-shell {
+  --surface: #fff;
+  --background: #f7f7fb;
+  --text: #25243b;
+  --border: #dddde9;
+  --accent: #6254c7;
+  font: 14px/1.5 system-ui, sans-serif;
+  color: var(--text);
+  background: var(--background);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.desktop-shell.dark {
+  --surface: #25252b;
+  --background: #1e1e23;
+  --text: #ebebf4;
+  --border: #42424b;
+  --accent: #b7aaff;
+  color-scheme: dark;
+}
+.desktop-shell > :not(.desktop-body) button,
+.boards-panel button,
+.desktop-dialog button {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 11px;
+  cursor: pointer;
+}
+.desktop-shell button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.desktop-shell button:focus-visible,
+.desktop-dialog input:focus-visible,
+.desktop-dialog select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.desktop-header {
+  height: 58px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.desktop-header strong {
+  white-space: nowrap;
+}
+.desktop-header strong span {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--accent);
+}
+.current-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 12px;
+}
+.save-status {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.save-status.error,
+.dialog-error {
+  color: #bb3541;
+}
+.desktop-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.boards-panel {
+  width: 216px;
+  padding: 16px 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+}
+.boards-panel h2 {
+  font-size: 15px;
+  margin: 0;
+}
+.directory {
+  margin: 0;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  max-height: 70px;
+  overflow: auto;
+  opacity: 0.7;
+}
+.button-row {
+  display: flex;
+  gap: 8px;
+}
+.button-row > * {
+  flex: 1;
+}
+.board-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-height: 40px;
+  overflow: auto;
+}
+.board-list button {
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.board-list button.selected {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.local-note {
+  font-size: 11px;
+  margin: 0;
+  opacity: 0.65;
+}
+.editor-area {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+.empty-state {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+.empty-state h1 {
+  font-size: 27px;
+  font-weight: 600;
+}
+.empty-state p {
+  margin: 5px;
+  opacity: 0.65;
+}
+.notice {
+  padding: 9px 18px;
+  font-size: 12px;
+  background: #fff3d3;
+  color: #62440d;
+  overflow-wrap: anywhere;
+}
+.notice.error {
+  background: #fff0f0;
+  color: #922d35;
+}
+.notice button {
+  margin-left: 12px;
+}
+.busy-indicator {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: 8px 18px;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--surface);
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #0005;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+}
+.desktop-dialog {
+  width: min(520px, 85vw);
+  max-height: 80vh;
+  overflow: auto;
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 24px;
+  box-shadow: 0 18px 80px #0003;
+}
+.dialog-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.dialog-title h2 {
+  font-size: 19px;
+  margin: 0;
+}
+.desktop-dialog label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+}
+.desktop-dialog label.checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+.desktop-dialog input:not([type="checkbox"]):not([type="range"]),
+.desktop-dialog select {
+  font: inherit;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--text);
+}
+.desktop-dialog p,
+.desktop-dialog small {
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+.desktop-dialog small {
+  display: block;
+  margin-top: 22px;
+}
+.recovery-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 45vh;
+  overflow: auto;
+}
+.recovery-list button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+.recovery-list span {
+  font-size: 11px;
+  opacity: 0.6;
+}

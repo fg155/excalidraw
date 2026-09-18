@@ -3,6 +3,7 @@
   "name": "excalidraw-monorepo",
   "packageManager": "yarn@1.22.22",
   "workspaces": [
+    "desktop",
     "excalidraw-app",
     "packages/*",
     "examples/*"
@@ -49,6 +50,9 @@
   "homepage": ".",
   "prettier": "@excalidraw/prettier-config",
   "scripts": {
+    "desktop:dev": "yarn --cwd desktop dev",
+    "desktop:build": "yarn --cwd desktop build",
+    "desktop:tauri": "yarn --cwd desktop tauri",
     "build-node": "node ./scripts/build-node.js",
     "build:app:docker": "yarn --cwd ./excalidraw-app build:app:docker",
     "build:app": "yarn --cwd ./excalidraw-app build:app",

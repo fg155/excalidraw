@@ -6205,6 +6205,10 @@ class App extends React.Component<AppProps, AppState> {
       this.actionManager.executeAction(actionFinalize);
     }
 
+    if (tool.type !== "freedraw") {
+      this.straightInk.cancel();
+    }
+
     const isToggleTool = TOGGLE_TOOLS.includes(tool.type);
     const toggle = opts.toggle === true && isToggleTool;
 
@@ -8570,6 +8574,10 @@ class App extends React.Component<AppProps, AppState> {
   private handleCanvasPointerDown = (
     event: React.PointerEvent<HTMLElement>,
   ) => {
+    // A palm touching the canvas must not terminate an active pen stroke.
+    if (this.straightInk.ignorePalm(event)) {
+      return;
+    }
     if (
       !this.isInteractionEnabled() &&
       !this.isToolSupported(this.state.activeTool.type)
@@ -9954,9 +9962,14 @@ class App extends React.Component<AppProps, AppState> {
       y: gridY,
     });
 
-    const simulatePressure = event.pressure === 0.5;
+    // A real pen can legitimately begin at exactly 0.5 pressure.
+    const simulatePressure =
+      event.pointerType !== "pen" && event.pressure === 0.5;
 
-    const strokeVariability = this.state.currentItemStrokeVariability;
+    const strokeVariability =
+      event.pointerType === "pen" && !this.state.penDetected
+        ? "variable"
+        : this.state.currentItemStrokeVariability;
 
     const element = newFreeDrawElement({
       type: elementType,
@@ -9986,7 +9999,7 @@ class App extends React.Component<AppProps, AppState> {
       pressures: simulatePressure ? [] : [event.pressure],
     });
 
-    this.straightInk.start(element, event.shiftKey);
+    this.straightInk.start(element, event);
 
     this.insertNewElement(element);
 
@@ -10662,6 +10675,9 @@ class App extends React.Component<AppProps, AppState> {
     pointerDownState: PointerDownState,
   ) {
     return withBatchedUpdatesThrottled((event: PointerEvent) => {
+      if (this.straightInk.isOtherPointer(event)) {
+        return;
+      }
       if (this.state.openDialog?.name === "elementLinkSelector") {
         return;
       }
@@ -11367,18 +11383,18 @@ class App extends React.Component<AppProps, AppState> {
           return;
         }
 
+        if (
+          this.straightInk.move(
+            newElement,
+            pointFrom<LocalPoint>(
+              pointerCoords.x - newElement.x,
+              pointerCoords.y - newElement.y,
+            ),
+          )
+        ) {
+          return;
+        }
         if (newElement.type === "freedraw") {
-          if (
-            this.straightInk.move(
-              newElement,
-              pointFrom<LocalPoint>(
-                pointerCoords.x - newElement.x,
-                pointerCoords.y - newElement.y,
-              ),
-            )
-          ) {
-            return;
-          }
           const points = newElement.points;
           const dx = pointerCoords.x - newElement.x;
           const dy = pointerCoords.y - newElement.y;
@@ -11611,6 +11627,12 @@ class App extends React.Component<AppProps, AppState> {
     pointerDownState: PointerDownState,
   ): (event: PointerEvent) => void {
     return withBatchedUpdates((childEvent: PointerEvent) => {
+      if (
+        childEvent.type === "pointerup" &&
+        this.straightInk.isOtherPointer(childEvent)
+      ) {
+        return;
+      }
       const elementsMap = this.scene.getNonDeletedElementsMap();
 
       this.removePointer(childEvent);
@@ -11872,7 +11894,7 @@ class App extends React.Component<AppProps, AppState> {
         childEvent,
       );
 
-      if (newElement?.type === "freedraw") {
+      if (newElement?.type === "freedraw" || newElement?.type === "line") {
         const pointerCoords = viewportCoordsToSceneCoords(
           childEvent,
           this.state,
@@ -11906,7 +11928,13 @@ class App extends React.Component<AppProps, AppState> {
           });
           return;
         }
+      }
 
+      if (newElement?.type === "freedraw") {
+        const pointerCoords = viewportCoordsToSceneCoords(
+          childEvent,
+          this.state,
+        );
         const points = newElement.points;
         let dx = pointerCoords.x - newElement.x;
         let dy = pointerCoords.y - newElement.y;

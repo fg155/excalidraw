@@ -1,13 +1,23 @@
-# Implementation checkpoint — frontend/save-flow milestone
+# Implementation checkpoint — smooth straight-ink and pen regression fix
 
-This is unfinished work, not a runnable desktop release. User manually pushed the preview commits and supplied the first cloud failure. No executable or successful cloud run yet. Resume here rather than starting again.
+This remains a development preview. The user manually pushed the CLI forwarding correction, supplied a successful Windows x64 Actions screenshot (including native build and artifact upload), and ran the app. The new correction below is local only and still needs a new user-pushed cloud build and physical tablet acceptance. Resume here rather than starting again.
+
+## Latest straight-ink / tablet correction (2026-09-18)
+
+- User reported separated/doubled curves when bending converted straight strokes, and previews stopping before the pointer while the completed line was correct. User agreed to smooth converted lines and requested tablet compatibility checks.
+- Preview now replaces the temporary freedraw with an actual standard line using the same id, then updates its endpoint. This bypasses two-point freedraw streamline shortening. Converted lines use roughness 0 so RoughJS paths coincide when bent; ordinary drawing defaults and existing elements are unchanged.
+- Standard converted lines preserve configured color, width and opacity, but are uniform-width and do not retain variable pressure along the line. Ordinary freehand keeps real pen pressure, including a first sample of exactly 0.5. First-pen variability matches existing pen detection behavior; an explicit later constant-width choice is respected.
+- Track the active pointer id; palm touch cannot terminate a pen stroke in pen mode, and unrelated pointer move/up/cancel events cannot hijack it. Tool switches cancel pending gesture timers.
+- Added 19 simulated pointer/rendering regression tests: mouse/pen preview geometry, identical final rendering, smooth bent path, pen pressure, style defaults, explicit constant-width preference, hold/negative endpoints/undo, zoom and scroll, palm input, hover, cancellation, side button, hardware eraser switching/erasure, Shift/Alt changes, curved-stroke rejection and no late conversion after release. Included this file in Windows CI.
+- Local checks: 105 JS/React tests passed across 8 files, 1 existing upstream todo; includes 49 desktop/gesture tests and 56 upstream linear-editor tests. Root and desktop TypeScript checks, targeted ESLint and frontend production build passed. Rust unchanged; the previous 7 storage tests also passed in the successful cloud run.
+- No physical tablet is available to the agent. Device-specific drivers, pressure reporting, Windows Ink, touch gestures, latency and this revision's native WebView rendering still need user testing. See desktop README for a short acceptance checklist. No system installs, GitHub push or workflow dispatch performed by the agent.
 
 ## First cloud-build failure and correction
 
 - User's push created `origin/feature/desktop-straight-ink` successfully. Git ownership checking in their shell required a command-scoped `-c "safe.directory=$repo"`; this is now included in the cloud-build guide, without global trust changes.
 - The first Windows run reached `Build native Windows executable and embedded frontend` and failed immediately: nested Yarn 1 scripts stripped the literal `--`, so Tauri rejected Cargo's `--locked` argument. This was a command forwarding error, before native application compilation.
 - Corrected workflow to run `node ../node_modules/@tauri-apps/cli/tauri.js build --target x86_64-pc-windows-msvc --features custom-protocol --no-bundle --ci -- --locked` directly with working-directory `desktop`.
-- Verified the actual command extracted from workflow YAML against the installed Tauri CLI: argument parsing now passes and execution reaches `cargo metadata`. Local Cargo is not on PATH and full MSVC prerequisites remain absent, so native build success must still be established in the next cloud run.
+- Verified the actual command extracted from workflow YAML against the installed Tauri CLI: argument parsing passes and execution reaches `cargo metadata`. Local MSVC prerequisites remain absent. The user's subsequent cloud screenshot confirmed successful native build and artifact upload.
 - This correction is committed locally for the user to push. Do not merely rerun the previous GitHub job: it uses the old commit. Do not push on the user's behalf.
 
 ## Latest native-build prerequisite check (2026-09-18)
@@ -52,7 +62,7 @@ This is unfinished work, not a runnable desktop release. User manually pushed th
 - Settings local only, versioned/validated JSON import/export. Export drawing preferences/theme/gesture preferences, not directory paths, window dimensions or permissions. Preserve settings on update.
 - Freehand tool: Shift held **before** pointer-down latches a straight gesture, start fixed, endpoint tracks pointer at arbitrary angles, release yields standard line. Mid-stroke Shift does not start the mode.
 - Near-straight ordinary ink held at endpoint for ~500ms becomes a straight preview, same fixed first endpoint and movable second endpoint. Reject curves/backtracking/tiny strokes, allow toggling features and changing wait time.
-- Preserve stroke color/width/opacity/roughness, single undo step, keep freehand tool selected. Cover Escape, blur, cancellation, multiple pointers, pen and mouse.
+- Preserve stroke color/width/opacity; user subsequently chose roughness 0 for converted lines only. Single undo step, keep freehand tool selected. Cover Escape, blur, cancellation, multiple pointers, pen and mouse.
 - Future server/browser/cooperation possible through shared editor and repository boundary; no server/auth/sharing implementation now.
 
 ## Changes included in local preview commits
@@ -70,7 +80,7 @@ This is unfinished work, not a runnable desktop release. User manually pushed th
 
 - Desktop and shared source TypeScript check passed: `node node_modules/typescript/bin/tsc --noEmit --pretty false -p desktop/tsconfig.json`. The new desktop tests are also included. Root typecheck passed earlier and is rerun at handoff.
 - ESLint passed for all desktop TypeScript plus straightInk implementation/tests. Prettier applied. Native rustfmt is not installed in the portable minimal toolchain, so Rust formatting remains pending.
-- 30 JavaScript/React tests pass across desktop App (4), session (5), settings (10), straightInk geometry (3), pointer integration (6), existing freedrawMode (2). Desktop tests use the real editor and mocked native IPC, not a real native window.
+- Latest JavaScript/React check: 105 passed and 1 existing upstream todo across desktop App (4), session (5), settings (10), straightInk geometry (3), pointer integration (6), straightInk pen/render tests (19), existing freedrawMode (2), upstream linear editor (56 passed, 1 todo). Desktop tests use the real editor and mocked native IPC, not a real native window.
 - 7 Rust storage tests pass with `cargo test --no-default-features`: roundtrip/conflict, bad paths/data, rename/delete/recovery, persistence, unavailable directory recovery, bounded/ordered snapshots, corrupt external-file conflict. This excludes Tauri app.rs/desktop-feature compilation.
 - Vite production build passed. Bundling emits upstream dependency `use client` warnings, but no build error. Offline runtime/CSP behavior has not yet been validated in a native window.
 - Native esbuild config loading is denied access to an ancestor directory in this environment. Workspace-only `../../work/run-tests.mjs` and `../../work/build-desktop.mjs` load the actual repository configs via TypeScript transpilation and use the programmatic Vitest/Vite APIs. No production config behavior was replaced. Run these helpers from workspace root (`node work/run-tests.mjs ...`, `node work/build-desktop.mjs`).
@@ -85,11 +95,11 @@ This is unfinished work, not a runnable desktop release. User manually pushed th
 
 ## Next implementation steps
 
-1. Compile the full Tauri desktop feature (app.rs is not yet compiler-validated), provide app icons, verify config/capabilities and package Windows executable. Do not treat a successful Rust storage test or frontend build as a native build. No exe/APP currently produced.
-2. Add Windows/macOS (Intel + Apple Silicon) manual CI packaging workflow; do not push/dispatch. Preserve licenses. Document artifact retrieval and unsigned/ad-hoc signing limitations. Stable identifier must remain `io.github.fg155.excalidraw-personal`.
+1. Ask the user to push the latest straight-ink correction and download its new Windows artifact. Previous full Tauri Windows build and packaging succeeded; this revision has only been checked locally at frontend/test level. Do not treat frontend build as a native build.
+2. Add macOS (Intel + Apple Silicon) CI packaging workflow; do not push/dispatch. Windows workflow exists and succeeded. Preserve licenses. Document artifact retrieval and unsigned/ad-hoc signing limitations. Stable identifier must remain `io.github.fg155.excalidraw-personal`.
 3. Native runtime validation: real dialogs/close/error flows, settings upgrade persistence, image roundtrip/export, local fonts with network disabled, CSP/native IPC restrictions, OneDrive behavior, recovery UI and visual/layout/accessibility QA. UI currently has no visual screenshot verification; modal focus trapping remains to be added.
 4. Storage hardening before release: enforce single-instance or cross-process locking (current mutex serializes only one process); review hard-link rename portability with OneDrive/APFS; handle corrupt directory.json without preventing recovery/startup. External OneDrive writes cannot be fully transactional with local revision checks. Recovery pre-save snapshots currently duplicate some states during native save; review retention efficiency.
-5. More gesture integration coverage: multi-touch, pen, zoom, tool changes/stale hold timers, styles and negative-coordinate endpoints; review preview/final width consistency. Current tests pass but do not cover these cases.
+5. Physical tablet acceptance: pressure, hardware buttons, hover, palm rejection, multi-touch, zoom and preview/final width. Pen/zoom/tool changes/timers/styles/negative coordinates are now covered by simulated regression tests, not real-device validation.
 6. Improve active-list refresh after automatic conflict save, test autosave timer directly, review settings error/reset behavior and main-window reloading. Full regression suite still pending.
 7. After user manually pushes, inspect the actual cloud-build result if provided, fix compiler/build errors locally, and ask user to push the next commit. Do not claim the preview works until native compilation and runtime checks succeed. User pushes manually; do not push automatically.
 

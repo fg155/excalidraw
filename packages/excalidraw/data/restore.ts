@@ -81,6 +81,8 @@ import { getNormalizedDimensions } from "@excalidraw/element";
 
 import { isInvisiblySmallElement } from "@excalidraw/element";
 
+import { normalizeCustomStrokeWidth } from "@excalidraw/common";
+
 import type { LocalPoint, Radians } from "@excalidraw/math";
 
 import type {
@@ -1309,6 +1311,9 @@ export const restoreAppState = (
     ...nextAppState,
     cursorButton: localAppState?.cursorButton || "up",
     paperGrid: normalizePaperGrid(nextAppState.paperGrid),
+    currentItemCustomStrokeWidth: normalizeCustomStrokeWidth(
+      nextAppState.currentItemCustomStrokeWidth,
+    ),
     // reset on fresh restore so as to hide the UI button if penMode not active
     penDetected:
       localAppState?.penDetected ??

@@ -486,13 +486,25 @@ export const FREEDRAW_STROKE_WIDTH: Readonly<
 export const getStrokeWidthByKey = (
   elementType: ExcalidrawElement["type"],
   strokeWidthKey: StrokeWidthKey,
+  customWidth?: number | null,
 ): ExcalidrawElement["strokeWidth"] => {
+  if (customWidth != null) {
+    return elementType === "freedraw" ? customWidth / 2 : customWidth;
+  }
   return elementType === "freedraw"
     ? FREEDRAW_STROKE_WIDTH[strokeWidthKey]
     : STROKE_WIDTH[strokeWidthKey];
 };
 
 export const DEFAULT_ELEMENT_STROKE_WIDTH_KEY: StrokeWidthKey = "medium";
+
+export const normalizeCustomStrokeWidth = (value: unknown): number | null =>
+  typeof value === "number" &&
+  Number.isFinite(value) &&
+  value >= 0.5 &&
+  value <= 32
+    ? value
+    : null;
 
 export const DEFAULT_ELEMENT_PROPS: {
   strokeColor: ExcalidrawElement["strokeColor"];

@@ -1,4 +1,4 @@
-import { FONT_FAMILY } from "@excalidraw/common";
+import { FONT_FAMILY, normalizeCustomStrokeWidth } from "@excalidraw/common";
 
 import type { AppState } from "@excalidraw/excalidraw/types";
 
@@ -29,6 +29,7 @@ export const drawingPreferences = (
       currentItemBackgroundColor: state.currentItemBackgroundColor,
       currentItemFillStyle: state.currentItemFillStyle,
       currentItemStrokeWidthKey: state.currentItemStrokeWidthKey,
+      currentItemCustomStrokeWidth: state.currentItemCustomStrokeWidth,
       currentItemStrokeStyle: state.currentItemStrokeStyle,
       currentItemRoughness: state.currentItemRoughness,
       currentItemOpacity: state.currentItemOpacity,
@@ -81,6 +82,13 @@ export function parseSettings(value: unknown): Settings {
       !["thin", "medium", "bold"].includes(String(value))
     ) {
       throw new Error("线宽无效");
+    }
+    if (
+      key === "currentItemCustomStrokeWidth" &&
+      value !== null &&
+      normalizeCustomStrokeWidth(value) === null
+    ) {
+      throw new Error("线宽须为 0.5–32");
     }
     if (
       key === "currentItemFontFamily" &&

@@ -1,6 +1,14 @@
-# Implementation checkpoint — paper backgrounds and board gallery
+# Implementation checkpoint — continuous stroke widths and image-safe eraser
 
 This remains a development preview. The user manually pushed the CLI forwarding correction, supplied a successful Windows x64 Actions screenshot (including native build and artifact upload), and ran the app. The new correction below is local only and still needs a new user-pushed cloud build and physical tablet acceptance. Resume here rather than starting again.
+
+## Latest stroke-width / image-protection revision (2026-09-18)
+
+- Added a 0.5–32 half-step stroke-width slider below the original three presets, using the existing freedraw schema's half-width mapping. Custom preference is separate from the legacy preset key, validated on restore/settings import, persisted in desktop preferences and applied to creation/shape conversion. Existing element numeric widths are unchanged until explicitly edited. Selecting a preset clears the custom override.
+- Fixed straight-ink width: numeric freedraw strokeWidth is not its visible diameter. Constant mode uses the laser renderer's 1.4 radius multiplier (2.8 diameter); variable mode shares the perfect-freehand size/thinning/easing formula. Shift line width is a distance-weighted running average of current pen-pressure widths, avoiding reliance on a light initial touchdown. Hold conversion averages the existing stroke and latches the width. Conversion is applied once, preview and release retain the same width; old drawings are not rewritten. Mouse simulated-pressure variable strokes use nominal pressure 0.5.
+- Images are excluded from eraser hit candidates, tap hits, group expansion, preview dimming and final deletion/binding cleanup. When a frame is erased, surviving images detach from that frame. Normal explicit Delete and undo remain available. No OS/tablet driver settings changed.
+- Checks: 197 focused tests passed, 1 upstream todo, across 13 files. New tests cover slider/preset creation and selected-object undo, restored width validation, actual rendered brush diameter at different pressures, Shift/hold width through release, picture-overlaid ink erasure via tap/drag/hardware eraser, groups, frames/undo and explicit image deletion. Root/desktop typecheck, targeted ESLint, diff check and production frontend build passed. Browser UI QA with mock native IPC verified slider selection at 7.5 and a visibly thicker stroke; no real board files used.
+- Still local-only: user manually pushes to build the Windows executable. No native build/tool installation, GitHub write or physical Huion L610 acceptance by the agent. Native and physical-tablet behavior needs the user's new-artifact test.
 
 ## Latest paper-background revision (2026-09-18)
 

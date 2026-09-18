@@ -9,6 +9,7 @@ describe("portable settings", () => {
       directory: "C:/private",
       drawing: {
         currentItemStrokeWidthKey: "bold",
+        currentItemCustomStrokeWidth: 7.5,
         currentItemStrokeColor: "#abcd",
         currentItemOpacity: 55,
         fileHandle: "private",
@@ -19,6 +20,7 @@ describe("portable settings", () => {
     expect(exported.directory).toBeUndefined();
     expect(exported.drawing).toEqual({
       currentItemStrokeWidthKey: "bold",
+      currentItemCustomStrokeWidth: 7.5,
       currentItemStrokeColor: "#abcd",
       currentItemOpacity: 55,
     });
@@ -39,6 +41,10 @@ describe("portable settings", () => {
     { drawing: { currentItemStrokeColor: "#12345" } },
     { drawing: { currentItemStrokeColor: "url(https://example.org)" } },
     { drawing: { currentItemStrokeWidthKey: "huge" } },
+    { drawing: { currentItemCustomStrokeWidth: 0 } },
+    { drawing: { currentItemCustomStrokeWidth: 33 } },
+    { drawing: { currentItemCustomStrokeWidth: Infinity } },
+    { drawing: { currentItemCustomStrokeWidth: "3" } },
   ])("rejects invalid settings: %j", (patch) => {
     expect(() => parseSettings({ ...defaults, ...patch })).toThrow();
   });

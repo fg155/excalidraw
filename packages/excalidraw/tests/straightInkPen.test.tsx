@@ -1,6 +1,6 @@
 import { ROUNDNESS, viewportCoordsToSceneCoords } from "@excalidraw/common";
 import { pointFrom } from "@excalidraw/math";
-import { ShapeCache } from "@excalidraw/element";
+import { ShapeCache, getFreedrawStrokeWidth } from "@excalidraw/element";
 
 import type { LocalPoint } from "@excalidraw/math";
 import type {
@@ -9,6 +9,7 @@ import type {
 } from "@excalidraw/element/types";
 
 import { Excalidraw } from "../index";
+import { getStraightInkWidth } from "../straightInk";
 
 import { API } from "./helpers/api";
 import { Keyboard, UI } from "./helpers/ui";
@@ -130,6 +131,33 @@ describe("straight ink pen input and rendered previews", () => {
     }
     expect(line.polygon).toBe(false);
   });
+
+  it.each(["shift", "hold"])(
+    "keeps %s line width comparable to custom-width pen ink through release",
+    async (mode) => {
+      API.setAppState({ currentItemCustomStrokeWidth: 8 });
+      down(20, 30, mode === "shift", 0.1);
+      const source = h.elements[0] as ExcalidrawFreeDrawElement;
+      expect(source.strokeWidth).toBe(4);
+      move(80, 30, 0.7);
+      move(180, 30, 0.7);
+      const expected =
+        mode === "shift"
+          ? getFreedrawStrokeWidth(source, 0.7)
+          : getStraightInkWidth(h.elements[0] as ExcalidrawFreeDrawElement);
+      if (mode === "hold") {
+        await hold();
+      }
+      expect(asLine().strokeWidth).toBeCloseTo(expected);
+      expect(asLine().strokeWidth).toBeGreaterThan(4);
+      move(220, 30, mode === "hold" ? 0.1 : 0.7);
+      const width = asLine().strokeWidth;
+      up(220, 30);
+      expect(asLine().strokeWidth).toBeCloseTo(width);
+      expect(width).toBeCloseTo(expected);
+      expect(h.state.currentItemCustomStrokeWidth).toBe(8);
+    },
+  );
 
   it("starts the ordinary line tool clean without changing other tool preferences", () => {
     API.setAppState({ currentItemRoughness: 2 });

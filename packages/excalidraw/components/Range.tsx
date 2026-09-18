@@ -35,11 +35,14 @@ export const Range = ({
       const inputWidth = rangeElement.offsetWidth;
       const thumbWidth =
         parseFloat(
-          getComputedStyle(rangeElement).getPropertyValue(
-            "--slider-thumb-size",
-          ),
+          rangeElement.ownerDocument
+            .defaultView!.getComputedStyle(rangeElement)
+            .getPropertyValue("--slider-thumb-size"),
         ) || 16;
-      const progress = ((value - min) / (max - min || 1)) * 100;
+      const progress = Math.max(
+        0,
+        Math.min(100, ((value - min) / (max - min || 1)) * 100),
+      );
       const position =
         (progress / 100) * (inputWidth - thumbWidth) + thumbWidth / 2;
       valueElement.style.left = `${position}px`;

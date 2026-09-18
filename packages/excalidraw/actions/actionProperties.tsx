@@ -20,6 +20,7 @@ import {
   getLineHeight,
   isTransparent,
   getStrokeWidthByKey,
+  normalizeCustomStrokeWidth,
   reduceToCommonValue,
   invariant,
   FONT_SIZES,
@@ -705,62 +706,117 @@ const getStrokeWidthForElement = (
   return getStrokeWidthByKey(element.type, strokeWidthKey);
 };
 
-export const actionChangeStrokeWidth = register<StrokeWidthKey>({
+export const actionChangeStrokeWidth = register<StrokeWidthKey | number>({
   name: "changeStrokeWidth",
   label: "labels.strokeWidth",
   trackEvent: false,
   perform: (elements, appState, value) => {
     invariant(value, "actionChangeStrokeWidth: value must be defined");
+    const customWidth =
+      typeof value === "number" ? normalizeCustomStrokeWidth(value) : null;
+    invariant(
+      typeof value !== "number" || customWidth !== null,
+      "Invalid stroke width",
+    );
 
     return {
       elements: changeProperty(elements, appState, (el) =>
         newElementWith(el, {
-          strokeWidth: getStrokeWidthForElement(el, value),
+          strokeWidth:
+            typeof value === "number"
+              ? getStrokeWidthByKey(
+                  el.type,
+                  appState.currentItemStrokeWidthKey,
+                  customWidth,
+                )
+              : getStrokeWidthForElement(el, value),
         }),
       ),
-      appState: { ...appState, currentItemStrokeWidthKey: value },
+      appState: {
+        ...appState,
+        currentItemStrokeWidthKey:
+          typeof value === "number"
+            ? appState.currentItemStrokeWidthKey
+            : value,
+        currentItemCustomStrokeWidth: customWidth,
+      },
       captureUpdate: CaptureUpdateAction.IMMEDIATELY,
     };
   },
-  PanelComponent: ({ elements, appState, updateData, app, data }) => (
-    <fieldset>
-      <legend>{t("labels.strokeWidth")}</legend>
-      <div className="buttonList">
-        <RadioSelection<StrokeWidthKey>
-          group="stroke-width"
-          options={[
-            {
-              value: "thin",
-              text: t("labels.thin"),
-              icon: StrokeWidthBaseIcon,
-              testId: "strokeWidth-thin",
-            },
-            {
-              value: "medium",
-              text: t("labels.medium"),
-              icon: StrokeWidthBoldIcon,
-              testId: "strokeWidth-medium",
-            },
-            {
-              value: "bold",
-              text: t("labels.bold"),
-              icon: StrokeWidthExtraBoldIcon,
-              testId: "strokeWidth-bold",
-            },
-          ]}
-          value={getFormValue(
-            elements,
-            app,
-            getStrokeWidthKeyForElement,
-            (element) => element.hasOwnProperty("strokeWidth"),
-            (hasSelection) =>
-              hasSelection ? null : appState.currentItemStrokeWidthKey,
-          )}
+  PanelComponent: ({ elements, appState, updateData, app }) => {
+    const width = getFormValue(
+      elements,
+      app,
+      (element) => element.strokeWidth * (element.type === "freedraw" ? 2 : 1),
+      (element) => element.hasOwnProperty("strokeWidth"),
+      (hasSelection) =>
+        hasSelection
+          ? null
+          : getStrokeWidthByKey(
+              "line",
+              appState.currentItemStrokeWidthKey,
+              appState.currentItemCustomStrokeWidth,
+            ),
+    );
+    return (
+      <fieldset>
+        <legend>{t("labels.strokeWidth")}</legend>
+        <div className="buttonList">
+          <RadioSelection<StrokeWidthKey>
+            group="stroke-width"
+            options={[
+              {
+                value: "thin",
+                text: t("labels.thin"),
+                icon: StrokeWidthBaseIcon,
+                testId: "strokeWidth-thin",
+              },
+              {
+                value: "medium",
+                text: t("labels.medium"),
+                icon: StrokeWidthBoldIcon,
+                testId: "strokeWidth-medium",
+              },
+              {
+                value: "bold",
+                text: t("labels.bold"),
+                icon: StrokeWidthExtraBoldIcon,
+                testId: "strokeWidth-bold",
+              },
+            ]}
+            value={getFormValue(
+              elements,
+              app,
+              getStrokeWidthKeyForElement,
+              (element) => element.hasOwnProperty("strokeWidth"),
+              (hasSelection) =>
+                hasSelection || appState.currentItemCustomStrokeWidth !== null
+                  ? null
+                  : appState.currentItemStrokeWidthKey,
+            )}
+            onChange={(value) => updateData(value)}
+          />
+        </div>
+        <Range
+          label={
+            <span className="visually-hidden">{t("labels.strokeWidth")}</span>
+          }
+          value={
+            width ??
+            appState.currentItemCustomStrokeWidth ??
+            getStrokeWidthByKey("line", appState.currentItemStrokeWidthKey)
+          }
+          hasCommonValue={width !== null}
+          minLabel={width === 0.5 ? 0.5 : null}
+          min={0.5}
+          max={32}
+          step={0.5}
           onChange={(value) => updateData(value)}
+          testId="stroke-width-slider"
         />
-      </div>
-    </fieldset>
-  ),
+      </fieldset>
+    );
+  },
 });
 
 export const actionChangeSloppiness = register<ExcalidrawElement["roughness"]>({

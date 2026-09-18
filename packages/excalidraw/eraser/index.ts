@@ -11,6 +11,7 @@ import {
   intersectElementWithLineSegment,
   isArrowElement,
   isFreeDrawElement,
+  isImageElement,
   isLineElement,
   isPointInElement,
 } from "@excalidraw/element";
@@ -99,7 +100,7 @@ export class EraserTrail extends AnimatedTrail {
     );
 
     const candidateElements = this.app.visibleElements.filter(
-      (el) => !el.locked,
+      (el) => !el.locked && !isImageElement(el),
     );
 
     const candidateElementsMap = arrayToMap(candidateElements);
@@ -160,7 +161,9 @@ export class EraserTrail extends AnimatedTrail {
             );
 
             for (const elementInGroup of elementsInGroup) {
-              this.elementsToErase.add(elementInGroup.id);
+              if (!isImageElement(elementInGroup)) {
+                this.elementsToErase.add(elementInGroup.id);
+              }
             }
             this.groupsToErase.add(shallowestGroupId);
           }

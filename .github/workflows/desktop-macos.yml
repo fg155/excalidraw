@@ -1,0 +1,113 @@
+name: Desktop macOS preview
+
+# Bootstrap on the development branch; no merge to master is required.
+# The manual-run UI requires this workflow to exist on the default branch.
+on:
+  push:
+    branches:
+      - feature/desktop-straight-ink
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    name: Test and build macOS ARM64
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      HUSKY: "0"
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Set up Yarn (on the temporary GitHub runner only)
+        run: npm install --global --force yarn@1.22.22
+
+      - name: Install locked JavaScript dependencies
+        run: yarn install --frozen-lockfile --non-interactive
+
+      - name: Typecheck
+        run: |
+          yarn tsc --noEmit --pretty false
+          yarn --cwd desktop typecheck
+
+      - name: Test desktop save flows and drawing gestures
+        run: >-
+          yarn vitest run desktop/src/App.test.tsx desktop/src/session.test.ts desktop/src/settings.test.ts packages/excalidraw/tests/paperGrid.test.ts packages/excalidraw/tests/straightInk.test.ts packages/excalidraw/tests/straightInkInteraction.test.tsx packages/excalidraw/tests/straightInkPen.test.tsx packages/excalidraw/tests/freedrawMode.test.tsx packages/excalidraw/tests/strokeWidth.test.tsx packages/excalidraw/tests/imageEraser.test.tsx packages/excalidraw/actions/actionProperties.test.tsx packages/element/tests/delta.test.tsx
+
+
+      - name: Set up Apple Silicon Rust (on the temporary GitHub runner only)
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+          rustup target add aarch64-apple-darwin
+
+      - name: Test native storage
+        run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --no-default-features --target aarch64-apple-darwin
+
+      - name: Generate platform icons from the existing project artwork
+        run: yarn --cwd desktop icons
+
+      - name: Build Apple Silicon application and DMG
+        working-directory: desktop
+        # Invoke directly: nested Yarn scripts consume Cargo's argument separator.
+        # Existing signingIdentity "-" provides ad-hoc signing, not notarization.
+        run: node ../node_modules/@tauri-apps/cli/tauri.js build --target aarch64-apple-darwin --features custom-protocol --bundles dmg --ci -- --locked
+
+      - name: Verify native architecture and application signature
+        run: |
+          app="desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Excalidraw Personal.app"
+          /usr/bin/lipo -verify_arch arm64 "$app/Contents/MacOS/excalidraw-personal"
+          /usr/bin/codesign --verify --deep --strict --verbose=2 "$app"
+
+      - name: Stage installer and licenses
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          installers=(desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg)
+          if [ "${#installers[@]}" -ne 1 ]; then
+            echo "Expected exactly one ARM64 DMG, found ${#installers[@]}" >&2
+            exit 1
+          fi
+          package="desktop/artifacts/Excalidraw-Personal-macOS-arm64"
+          mkdir -p desktop/artifacts
+          # Refuse to mix files with a stale package directory.
+          mkdir "$package"
+          cp "${installers[0]}" "$package/"
+          cp LICENSE "$package/LICENSE.txt"
+          cp desktop/MACOS-PREVIEW.zh-CN.txt "$package/README.zh-CN.txt"
+          # Upstream font license/copyright texts also live in index.ts comments.
+          fonts="packages/excalidraw/fonts"
+          while IFS= read -r -d '' source; do
+            relative="${source#"$fonts/"}"
+            destination="$package/licenses/fonts/$relative"
+            mkdir -p "$(dirname "$destination")"
+            cp "$source" "$destination"
+          done < <(find "$fonts" -type f \( -name index.ts -o -iname 'LICENSE*' -o -iname 'OFL*' -o -iname 'NOTICE*' -o -iname 'COPYING*' \) -print0)
+          (cd "$package" && shasum -a 256 -- *.dmg > SHA256SUMS.txt)
+
+      # Upload the DMG, not a raw .app directory: preserve bundle permissions/symlinks.
+      - name: Upload macOS preview (not a public release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Excalidraw-Personal-macOS-arm64-${{ github.run_number }}
+          path: desktop/artifacts/Excalidraw-Personal-macOS-arm64/
+          if-no-files-found: error
+          retention-days: 14

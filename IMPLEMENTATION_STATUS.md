@@ -1,6 +1,14 @@
-# Implementation checkpoint — continuous stroke widths and image-safe eraser
+# Implementation checkpoint — Apple Silicon Mac cloud-build configuration
 
-This remains a development preview. The user manually pushed the CLI forwarding correction, supplied a successful Windows x64 Actions screenshot (including native build and artifact upload), and ran the app. The new correction below is local only and still needs a new user-pushed cloud build and physical tablet acceptance. Resume here rather than starting again.
+This remains a development preview. The user manually pushed the CLI forwarding correction, supplied a successful Windows x64 Actions screenshot (including native build and artifact upload), and ran the app. The latest Mac workflow is local only and still needs a user-pushed cloud build and native Mac acceptance. Resume here rather than starting again.
+
+## Latest Apple Silicon cloud-build revision (2026-09-25)
+
+- User requested GitHub builds for their M5 Mac and approved adding the workflow. Added `.github/workflows/desktop-macos.yml`, named `Desktop macOS preview`: independent of the unchanged Windows workflow, runs on pushes to `feature/desktop-straight-ink`, macos-15 ARM64 runner, explicit `aarch64-apple-darwin` target, Node 24/Yarn 1.22.22, frozen JS and locked Rust dependencies, the same 12-file focused frontend test list, typechecks and native storage tests.
+- Direct Tauri CLI invocation preserves Cargo's `-- --locked` separator and explicitly bundles a DMG. CI checks the bundled executable's arm64 architecture and ad-hoc application signature before staging the DMG, MIT/font license texts, Chinese install notes and SHA-256 checksum. Upload the DMG rather than a raw .app directory to preserve macOS bundle permissions/symlinks. Artifact retention is 14 days. No Intel/Universal build in this revision.
+- Reuses the stable identifier `io.github.fg155.excalidraw-personal` and existing macOS signingIdentity `-`. No notarization, Apple secrets, releases, source/settings changes, local native tool installs, GitHub push or workflow dispatch. Contents permission remains read-only; user manually pushes. Initial Mac launch may require explicit OS trust after verifying the build source; never disable system protection globally.
+- Updated the cloud-build guide and desktop overview, and added `desktop/MACOS-PREVIEW.zh-CN.txt`. Documents Summary > Artifacts download, DMG installation, manual settings/board migration, device-local recovery data and first native/tablet checks.
+- Local checks passed: YAML parsing and assertions for trigger, permissions, target, CLI forwarding, signing identity, artifact/required input paths and test-list parity with Windows; all 141 tests across the 12 CI frontend files; production frontend build. Formatting and diff checks completed before commit. This Windows host cannot validate the macOS native build, DMG creation or Gatekeeper/native tablet behavior; these remain pending the first user-pushed GitHub build and M5 run.
 
 ## Latest stroke-width / image-protection revision (2026-09-18)
 
@@ -124,7 +132,7 @@ This remains a development preview. The user manually pushed the CLI forwarding 
 ## Next implementation steps
 
 1. Ask the user to push the latest straight-ink correction and download its new Windows artifact. Previous full Tauri Windows build and packaging succeeded; this revision has only been checked locally at frontend/test level. Do not treat frontend build as a native build.
-2. Add macOS (Intel + Apple Silicon) CI packaging workflow; do not push/dispatch. Windows workflow exists and succeeded. Preserve licenses. Document artifact retrieval and unsigned/ad-hoc signing limitations. Stable identifier must remain `io.github.fg155.excalidraw-personal`.
+2. Apple Silicon Mac workflow is now prepared (see 2026-09-25 checkpoint); user must push and report the first native build/run result. Intel/Universal remains unimplemented and is not needed for the user's M5. Do not push/dispatch. Preserve the stable identifier `io.github.fg155.excalidraw-personal`.
 3. Native runtime validation: real dialogs/close/error flows, settings upgrade persistence, image roundtrip/export, local fonts with network disabled, CSP/native IPC restrictions, OneDrive behavior, recovery UI and visual/layout/accessibility QA. UI currently has no visual screenshot verification; modal focus trapping remains to be added.
 4. Storage hardening before release: enforce single-instance or cross-process locking (current mutex serializes only one process); review hard-link rename portability with OneDrive/APFS; handle corrupt directory.json without preventing recovery/startup. External OneDrive writes cannot be fully transactional with local revision checks. Recovery pre-save snapshots currently duplicate some states during native save; review retention efficiency.
 5. Physical tablet acceptance: pressure, hardware buttons, hover, palm rejection, multi-touch, zoom and preview/final width. Pen/zoom/tool changes/timers/styles/negative coordinates are now covered by simulated regression tests, not real-device validation.

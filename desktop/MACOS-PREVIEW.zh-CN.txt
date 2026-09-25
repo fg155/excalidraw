@@ -1,0 +1,29 @@
+Excalidraw Personal — macOS Apple Silicon 开发预览
+
+适用于 Apple Silicon Mac，包括 M5；不是 Intel 版。
+
+1. 在 Mac 上完整解压从自己仓库 Actions 下载的 ZIP。
+2. 打开其中的 .dmg，把 Excalidraw Personal.app 拖到“应用程序”。
+3. 从“应用程序”启动；不要一直从 DMG 内运行。安装后可以推出磁盘映像。
+4. 不需要安装 Node、Rust 或 Xcode。首次测试请使用单独的测试文件夹。
+
+此版本只有 ad-hoc 临时签名，未经过 Apple 公证，首次打开可能被系统拦截。
+确认下载来源、仓库和构建记录；如被拦截，请保留原始提示或截图再排查。
+不要关闭 Gatekeeper、杀毒软件或其他系统防护。
+SHA256SUMS.txt 可检查 DMG 是否损坏，不代表 Apple 公证或来源认证。
+
+应用标识保持 io.github.fg155.excalidraw-personal。设置和恢复记录位于系统
+应用数据目录，画板保存在你选择的文件夹；替换应用不会主动清理这些数据。
+更新前先关闭旧应用、备份画板并导出设置，不要删除应用数据目录。
+
+Windows 和 Mac 设置不会自动同步。可在 Windows 导出设置，再在 Mac 导入；
+Mac 需要重新选择本机画板文件夹，不能直接使用 Windows 的 C:\ 路径。
+画板可复制 .excalidraw 文件或通过 OneDrive 同步；避免两台设备同时编辑同一画板。
+回收站和历史备份属于各自机器，不随画板文件夹同步。
+
+初次验证：新建画板 → 绘图 → Cmd+S → 关闭重开 → 检查画板和设置。
+再测试背景网格、线宽、拉直、插入图片、橡皮不擦图片、撤销和删除恢复。
+数位板需要 Mac 驱动实际验收；Windows 测试不能替代 Mac 的笔压和侧键测试。
+当前预览请只打开一个应用实例，不要存放重要画板的唯一副本。
+
+本项目基于 Excalidraw，保留原项目 MIT 许可证。非 Excalidraw 官方桌面发行版。

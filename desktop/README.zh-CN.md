@@ -1,8 +1,8 @@
 # Excalidraw Personal 桌面版（开发中）
 
-这是个人定制源码，Windows x64 已成功生成便携预览版，仍在测试中；Mac 版尚未打包。
+这是个人定制源码，Windows x64 已成功生成便携预览版，仍在测试中；已添加 Apple Silicon（包括 M5）的 Mac DMG 构建流程，尚未完成首次 Mac 云端构建和实机验证。
 
-Windows 云端构建已由用户手动推送并成功运行。后续修正也需手动推送，下载对应新构建的预览包，步骤见 [云端构建指南](./CLOUD-BUILD.zh-CN.md)。
+Windows 云端构建已由用户手动推送并成功运行。后续手动推送开发分支会分别触发 Windows 和 Mac 构建，下载对应新构建的预览包；Mac 使用临时签名、没有 Apple 公证，步骤见 [云端构建指南](./CLOUD-BUILD.zh-CN.md)。
 
 ## 目前已接入的功能
 

@@ -1,6 +1,6 @@
-# 第一次用 GitHub 构建 Windows 预览版
+# 用 GitHub 构建 Windows / Mac 预览版
 
-目前只是准备好了构建配置，**尚未在 GitHub 执行，也尚未得到 exe**。第一轮原生编译可能暴露需要继续修正的问题。请先测试 Windows，Mac 打包后续再接。
+Windows x64 已由用户手动推送并成功构建、运行过；最新代码仍需重新构建。现已添加 Apple Silicon（包括 M5）Mac 构建配置，**尚未执行 Mac 云端构建或实机验证**。首次 Mac 原生编译可能暴露需要继续修正的问题。
 
 ## 1. 开启你自己仓库的 Actions
 
@@ -30,13 +30,13 @@ $portableGit = 'C:\Users\fg155\Documents\Codex\2026-09-18\xi\work\mingit'
 & "$portableGit\cmd\git.exe" "--exec-path=$portableGit\mingw64\bin" -c "safe.directory=$repo" -C $repo -c http.sslBackend=openssl push -u origin feature/desktop-straight-ink
 ```
 
-这会把已提交的代码推到你自己的 `fg155/excalidraw` 仓库的开发分支，同时触发 Windows 构建。不会推到官方仓库，不会覆盖 master，不会发布正式 Release。
+这会把已提交的代码推到你自己的 `fg155/excalidraw` 仓库的开发分支，同时触发 Windows 和 Mac 两个独立构建。不会推到官方仓库，不会覆盖 master，不会发布正式 Release。
 
 `safe.directory` 只在这一次命令中信任该目录，用于处理隔离环境创建仓库与本机用户不同的所有权检查；不修改全局 Git 设置。
 
 如果首次推送弹出 GitHub 登录，请由你自己完成。如果出现权限、认证或网络错误，把错误文字发给助手；不要把密码、令牌或带有凭证的 URL 发到聊天里，不要为了推送关闭 TLS 证书校验，也不要使用强制推送。
 
-## 4. 等待构建，下载 ZIP
+## 4. Windows：等待构建，下载 ZIP
 
 回到 [Actions 页面](https://github.com/fg155/excalidraw/actions)，寻找 **Desktop Windows preview** 的最新记录。它会安装云端工具、运行相关测试、编译完整的原生程序，然后上传文件。
 
@@ -46,7 +46,7 @@ $portableGit = 'C:\Users\fg155\Documents\Codex\2026-09-18\xi\work\mingit'
 
 第一轮无需点击 “Run workflow”：本配置会在开发分支推送后自动运行。GitHub 的手动运行按钮通常要求工作流文件已存在于默认分支，因此初期没有按钮是正常情况。[GitHub 官方说明](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)
 
-## 5. 首次运行
+## 5. Windows：首次运行
 
 把 ZIP **完整解压**，再双击 `excalidraw-personal.exe`；若有 DLL，请保留同目录。先选择一个新的测试文件夹，不要选择重要画布的唯一副本。
 
@@ -55,6 +55,21 @@ $portableGit = 'C:\Users\fg155\Documents\Codex\2026-09-18\xi\work\mingit'
 建议先测：新建画布 → 绘图 → 等待“已保存到本机” → 关闭重开 → 检查画布和设置。之后再测试 Shift 拉直、停顿拉直、撤销、插入图片、重命名及删除后恢复。
 
 这仍是开发预览，不是正式发布。首次成功编译后，还需要原生窗口、离线字体、手写笔和 OneDrive 的实际验证。
+
+## 6. Mac（M5 / Apple Silicon）：构建与安装
+
+同一次推送会启动 **Desktop macOS preview**，任务名为 **Test and build macOS ARM64**。无需新建仓库，也不需要在 Windows 或 Mac 本机安装 Xcode、Rust 或 Node。工作流使用 GitHub 的 `macos-15` ARM64 机器，目标为 `aarch64-apple-darwin`；不是 Intel 版，也不是 Universal 包。
+
+1. 在 [Actions 页面](https://github.com/fg155/excalidraw/actions) 选择 **Desktop macOS preview**，打开最新运行记录。不要误选 Windows 构建。
+2. 绿色成功后，点击左侧 **Summary**，在下方 **Artifacts** 下载 `Excalidraw-Personal-macOS-arm64-数字`，不是步骤日志页面中的下载按钮。产物保留 14 天。
+3. 在 Mac 上完整解压 ZIP，打开里面的 `.dmg`，把 **Excalidraw Personal.app** 拖进“应用程序”，然后从“应用程序”启动。DMG 保留应用包的执行权限和符号链接；不要在 Windows 上拆开、重打包 `.app`。
+4. 先选择单独的测试文件夹，验证新建、Cmd+S、关闭重开、图片、网格、拉直及橡皮。数位板还需 Mac 驱动下实际验证。
+
+构建会检查 ARM64 可执行文件和应用签名，并附带 MIT／字体许可证、安装说明与 DMG 的 SHA-256 校验值。校验值用于检查文件完整性，不替代来源认证。若构建失败，请发失败步骤的末尾日志；若没有 Mac 任务，确认已推送包含 `.github/workflows/desktop-macos.yml` 的提交并启用 Actions。初期没有 “Run workflow” 按钮是正常的，推送即可触发。
+
+沿用现有 `signingIdentity: "-"`，只做 **ad-hoc 临时签名，没有 Apple 公证**。这个自用预览流程不需要提供 Apple 账号或签名密钥，也不发布 App Store；首次打开可能被系统拦截。请核对下载来源并保留具体提示再排查，不要关闭 Gatekeeper 或其他系统防护。[Tauri 签名说明](https://v2.tauri.app/distribute/sign/macos/)
+
+两台设备使用同一套源码，但数据不会自动迁移：Windows 设置可导出后在 Mac 导入，Mac 需重新选择本机画板文件夹；画板可复制 `.excalidraw` 文件或使用 OneDrive。不要同时编辑同一文件。回收站和自动备份保留在各自机器。应用标识不变，更新前备份画板、导出设置并关闭旧应用，不要删除应用数据目录。
 
 ## 后续重复构建
 

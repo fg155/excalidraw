@@ -1,6 +1,12 @@
 # Implementation checkpoint — Apple Silicon Mac cloud-build configuration
 
-This remains a development preview. The user manually pushed the CLI forwarding correction, supplied a successful Windows x64 Actions screenshot (including native build and artifact upload), and ran the app. The latest Mac workflow is local only and still needs a user-pushed cloud build and native Mac acceptance. Resume here rather than starting again.
+This remains a development preview. Windows previously built and ran. The user has now pushed the Mac workflow and supplied its first failure screenshot: the build step completed but architecture verification failed before artifact upload. The correction below is local only and needs a new user-pushed build and native Mac acceptance. Resume here rather than starting again.
+
+## Mac verification correction after first cloud run
+
+- Screenshot shows Apple's lipo interpreting the executable path after `-verify_arch arm64` as another architecture. Fixed argument order to `lipo "$app/Contents/MacOS/excalidraw-personal" -verify_arch arm64`, as required by Apple's lipo manual. Retained architecture and signature checks; did not bypass the failed validation. The screenshot does not establish that signature verification, artifact staging/upload or native runtime succeeded.
+- Both workflows previously inherited the same commit message as their run title, so the macOS-related commit title also appeared on the Windows run. Added explicit `run-name` labels `Mac ARM64` and `Windows x64`, and documented how to distinguish runs/artifacts and why rerunning the old commit would retain the bug. Successful Windows artifacts are not Mac installers.
+- No application code, settings, signing identity or data changed. Local YAML/command-order assertions, formatting and diff checks are used for this narrow workflow fix; macOS lipo/codesign and artifact upload still require the new cloud run. No GitHub push/dispatch by the agent.
 
 ## Latest Apple Silicon cloud-build revision (2026-09-25)
 

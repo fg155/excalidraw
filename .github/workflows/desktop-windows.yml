@@ -1,4 +1,5 @@
 name: Desktop Windows preview
+run-name: "Windows x64 · ${{ github.ref_name }} · #${{ github.run_number }}"
 
 # Bootstrap from the development branch without merging unfinished work to master.
 # workflow_dispatch becomes available in the UI once this file is on the default branch.

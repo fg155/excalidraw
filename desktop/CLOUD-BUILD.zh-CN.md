@@ -60,6 +60,8 @@ $portableGit = 'C:\Users\fg155\Documents\Codex\2026-09-18\xi\work\mingit'
 
 同一次推送会启动 **Desktop macOS preview**，任务名为 **Test and build macOS ARM64**。无需新建仓库，也不需要在 Windows 或 Mac 本机安装 Xcode、Rust 或 Node。工作流使用 GitHub 的 `macos-15` ARM64 机器，目标为 `aarch64-apple-darwin`；不是 Intel 版，也不是 Universal 包。
 
+新运行记录标题分别以 **Mac ARM64** 和 **Windows x64** 开头。旧记录可能都显示同一个提交标题（即使标题中写着 macOS），不代表它们都是 Mac 构建。请以工作流名和产物名区分：Windows 成功不能替代 Mac 成功；Mac 上传步骤之前失败时不会有 Mac 下载包。修正后需推送新提交，重跑旧记录仍会使用旧版配置。
+
 1. 在 [Actions 页面](https://github.com/fg155/excalidraw/actions) 选择 **Desktop macOS preview**，打开最新运行记录。不要误选 Windows 构建。
 2. 绿色成功后，点击左侧 **Summary**，在下方 **Artifacts** 下载 `Excalidraw-Personal-macOS-arm64-数字`，不是步骤日志页面中的下载按钮。产物保留 14 天。
 3. 在 Mac 上完整解压 ZIP，打开里面的 `.dmg`，把 **Excalidraw Personal.app** 拖进“应用程序”，然后从“应用程序”启动。DMG 保留应用包的执行权限和符号链接；不要在 Windows 上拆开、重打包 `.app`。

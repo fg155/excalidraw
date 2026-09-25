@@ -1,4 +1,5 @@
 name: Desktop macOS preview
+run-name: "Mac ARM64 · ${{ github.ref_name }} · #${{ github.run_number }}"
 
 # Bootstrap on the development branch; no merge to master is required.
 # The manual-run UI requires this workflow to exist on the default branch.
@@ -74,7 +75,9 @@ jobs:
       - name: Verify native architecture and application signature
         run: |
           app="desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Excalidraw Personal.app"
-          /usr/bin/lipo -verify_arch arm64 "$app/Contents/MacOS/excalidraw-personal"
+          # -verify_arch consumes all following arguments as architecture names.
+          # The input path must precede it, including when the path is quoted.
+          /usr/bin/lipo "$app/Contents/MacOS/excalidraw-personal" -verify_arch arm64
           /usr/bin/codesign --verify --deep --strict --verbose=2 "$app"
 
       - name: Stage installer and licenses

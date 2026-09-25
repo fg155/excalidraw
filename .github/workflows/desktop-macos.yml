@@ -44,6 +44,9 @@ jobs:
       - name: Install locked JavaScript dependencies
         run: yarn install --frozen-lockfile --non-interactive
 
+      - name: Test macOS packaging configuration
+        run: node --test desktop/scripts/macos-workflow.test.cjs
+
       - name: Typecheck
         run: |
           yarn tsc --noEmit --pretty false
@@ -70,14 +73,29 @@ jobs:
         working-directory: desktop
         # Invoke directly: nested Yarn scripts consume Cargo's argument separator.
         # Existing signingIdentity "-" provides ad-hoc signing, not notarization.
-        run: node ../node_modules/@tauri-apps/cli/tauri.js build --target aarch64-apple-darwin --features custom-protocol --bundles dmg --ci -- --locked
+        # Explicitly retain app: a DMG-only build cleans up the intermediate .app.
+        run: node ../node_modules/@tauri-apps/cli/tauri.js build --target aarch64-apple-darwin --features custom-protocol --bundles app,dmg --ci -- --locked
 
       - name: Verify native architecture and application signature
         run: |
-          app="desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Excalidraw Personal.app"
+          set -euo pipefail
+          shopt -s nullglob
+          apps=(desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app)
+          if [ "${#apps[@]}" -ne 1 ]; then
+            echo "Expected exactly one retained .app, found ${#apps[@]}. Build both app,dmg." >&2
+            exit 1
+          fi
+          app="${apps[0]}"
+          executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")
+          binary="$app/Contents/MacOS/$executable"
+          if [ -z "$executable" ] || [ ! -f "$binary" ] || [ ! -x "$binary" ]; then
+            echo "Bundle executable is missing or not executable: $binary" >&2
+            exit 1
+          fi
+          printf 'Verifying application: %s\nExecutable: %s\n' "$app" "$binary"
           # -verify_arch consumes all following arguments as architecture names.
           # The input path must precede it, including when the path is quoted.
-          /usr/bin/lipo "$app/Contents/MacOS/excalidraw-personal" -verify_arch arm64
+          /usr/bin/lipo "$binary" -verify_arch arm64
           /usr/bin/codesign --verify --deep --strict --verbose=2 "$app"
 
       - name: Stage installer and licenses

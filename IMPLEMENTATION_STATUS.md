@@ -1,6 +1,12 @@
 # Implementation checkpoint — Apple Silicon Mac cloud-build configuration
 
-This remains a development preview. Windows previously built and ran. The user has now pushed the Mac workflow and supplied its first failure screenshot: the build step completed but architecture verification failed before artifact upload. The correction below is local only and needs a new user-pushed build and native Mac acceptance. Resume here rather than starting again.
+This remains a development preview. Windows previously built and ran. The user pushed two Mac workflow versions: the first failed at lipo argument parsing, the second could not find the intermediate .app after DMG-only bundling. The latest correction below is local only and needs a new user-pushed build and native Mac acceptance. Resume here rather than starting again.
+
+## Mac retained-app correction after second cloud run
+
+- Verified the installed CLI is 2.11.4 and inspected the matching upstream `tauri-cli-v2.11.4` bundler source: `crates/tauri-bundler/src/bundle.rs` explicitly deletes intermediate .app bundles when only DMG is requested. This explains the missing bundle in the user's second screenshot; fixing lipo's argument order alone was insufficient.
+- Build now explicitly requests `--bundles app,dmg`. Verification selects exactly one actual .app in the target's macos bundle folder, reads CFBundleExecutable with PlistBuddy, checks the binary exists/is executable, logs resolved paths and then performs the ARM64/signature checks. Upload remains DMG-only with licenses; no raw .app upload, signature bypass or new signing identity.
+- Added four Node configuration regression tests to the repository and macOS CI, covering app retention, bundle/executable lookup, lipo ordering/mandatory validation, and DMG artifact isolation. These checks run on Windows but do not emulate Tauri, lipo, codesign or macOS execution. Local tests, formatting and diff checks are required before committing; cloud validation and M5 launch remain pending. No push/dispatch by the agent.
 
 ## Mac verification correction after first cloud run
 

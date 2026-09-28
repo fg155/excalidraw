@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { pointFrom } from "@excalidraw/math";
+import { CaptureUpdateAction } from "@excalidraw/excalidraw";
 import {
   act,
   fireEvent,
@@ -13,6 +14,7 @@ import { API } from "../../packages/excalidraw/tests/helpers/api";
 
 import { DesktopApp } from "./App";
 import { defaults } from "./settings";
+import * as snapshots from "./boardSnapshot";
 
 const native = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -120,6 +122,100 @@ async function openExisting() {
 }
 
 describe("desktop shell with real editor and mocked native IPC", () => {
+  it("loads an old file without tombstones and compacts only when saved", async () => {
+    const live = API.createElement({ type: "rectangle" });
+    const deleted = API.createElement({ type: "ellipse", isDeleted: true });
+    const content = JSON.stringify({
+      ...JSON.parse(empty),
+      elements: [live, deleted],
+    });
+    boards.set("existing.excalidraw", { content, revision: "old" });
+    mount();
+    await openExisting();
+    expect(window.h.elements.map((element) => element.id)).toEqual([live.id]);
+    expect(boards.get("existing.excalidraw")!.content).toBe(content);
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    await waitFor(() =>
+      expect(
+        JSON.parse(boards.get("existing.excalidraw")!.content).elements,
+      ).toHaveLength(1),
+    );
+  });
+
+  it("saving a deletion preserves in-session undo and releases the editor on home", async () => {
+    mount();
+    await openExisting();
+    const live = API.createElement({ type: "rectangle" });
+    API.updateScene({
+      elements: [live],
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    });
+    API.updateScene({
+      elements: [
+        {
+          ...live,
+          isDeleted: true,
+          version: live.version + 1,
+          versionNonce: live.versionNonce + 1,
+        },
+      ],
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "保存" })).toBeEnabled(),
+    );
+    expect(
+      JSON.parse(boards.get("existing.excalidraw")!.content).elements,
+    ).toHaveLength(0);
+    expect(
+      window.h.elements.some(
+        (element) => element.id === live.id && element.isDeleted,
+      ),
+    ).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "撤销" }));
+    expect(
+      window.h.elements.some(
+        (element) => element.id === live.id && !element.isDeleted,
+      ),
+    ).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "返回画板首页" }));
+    await screen.findByRole("main", { name: "画板首页" });
+    await openExisting();
+    expect(
+      window.h.elements.filter((element) => !element.isDeleted),
+    ).toHaveLength(1);
+  });
+
+  it("does not serialize the board on every drawing or viewport update", async () => {
+    mount();
+    await openExisting();
+    const serialize = vi.spyOn(snapshots, "serializeBoard");
+    try {
+      const ink = API.createElement({
+        type: "freedraw",
+        points: [pointFrom(0, 0), pointFrom(10, 10)],
+      });
+      for (let i = 0; i < 25; i++) {
+        API.setElements([
+          { ...ink, version: i + 1, versionNonce: i + 1, x: i },
+        ]);
+        API.setAppState({ scrollX: i });
+      }
+      expect(serialize).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "保存" }));
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "保存" })).toBeEnabled(),
+      );
+      expect(serialize).toHaveBeenCalledTimes(1);
+      expect(
+        JSON.parse(boards.get("existing.excalidraw")!.content).elements[0].x,
+      ).toBe(24);
+    } finally {
+      serialize.mockRestore();
+    }
+  });
+
   it("saves paper per board, supports undo, and leaves drawing and snapping alone", async () => {
     mount();
     await openExisting();

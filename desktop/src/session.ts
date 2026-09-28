@@ -12,6 +12,7 @@ export class DocumentSession {
   conflict = false;
   private content: string | null = null;
   private persisted: string | null = null;
+  private pendingSnapshot: (() => string) | null = null;
   private timer: number | undefined;
   private flight: Promise<void> | null = null;
   private disposed = false;
@@ -28,23 +29,45 @@ export class DocumentSession {
   }
 
   // Initialization can normalize imported files. It must not save a blank scene.
-  initialize(content: string) {
-    if (this.content === null) {
-      this.content = this.persisted = content;
+  initialize(content: string, needsCompaction = false) {
+    if (!this.disposed && this.content === null) {
+      this.content = content;
+      this.persisted = needsCompaction ? null : content;
+      // Merely opening an old file does not write it. The next explicit flush
+      // or actual edit saves the compact snapshot through the normal queue.
+      if (needsCompaction) {
+        this.state = "pending";
+        this.changed();
+      }
     }
   }
 
-  update(content: string) {
-    if (this.disposed || this.content === null || content === this.content) {
+  update(content: string | (() => string)) {
+    if (this.disposed || this.content === null) {
       return;
     }
-    this.content = content;
-    this.state = this.flight
+    if (
+      typeof content === "string" &&
+      !this.pendingSnapshot &&
+      content === this.content
+    ) {
+      return;
+    }
+    if (typeof content === "function") {
+      this.pendingSnapshot = content;
+    } else {
+      this.pendingSnapshot = null;
+      this.content = content;
+    }
+    const nextState = this.flight
       ? "saving"
-      : content === this.persisted
+      : !this.pendingSnapshot && this.content === this.persisted
       ? "saved"
       : "pending";
-    this.changed();
+    if (this.state !== nextState) {
+      this.state = nextState;
+      this.changed();
+    }
     this.clock.clearTimeout(this.timer);
     this.timer = this.clock.setTimeout(() => {
       void this.flush().catch(() => {
@@ -55,6 +78,9 @@ export class DocumentSession {
 
   flush(): Promise<void> {
     this.clock.clearTimeout(this.timer);
+    if (this.disposed) {
+      return Promise.resolve();
+    }
     if (this.flight) {
       return this.flight;
     }
@@ -65,12 +91,26 @@ export class DocumentSession {
   }
 
   private async drain() {
-    while (this.content !== null && this.content !== this.persisted) {
-      const snapshot = this.content;
+    while (
+      !this.disposed &&
+      this.content !== null &&
+      (this.pendingSnapshot || this.content !== this.persisted)
+    ) {
       this.state = "saving";
       this.error = "";
       this.changed();
       try {
+        if (this.pendingSnapshot) {
+          // Materialize once after the debounce (or an explicit flush), before
+          // awaiting IO. Edits during IO install a new pending snapshot.
+          const serialize = this.pendingSnapshot;
+          this.content = serialize();
+          this.pendingSnapshot = null;
+        }
+        if (this.content === this.persisted) {
+          continue;
+        }
+        const snapshot = this.content;
         // Independent recovery works even if the OneDrive directory disappears.
         await this.backup(this.name, snapshot);
         const result: SavedBoard = await this.repository.save(
@@ -78,6 +118,9 @@ export class DocumentSession {
           snapshot,
           this.revision,
         );
+        if (this.disposed) {
+          return;
+        }
         this.name = result.name;
         this.revision = result.revision;
         this.conflict ||= result.conflict;
@@ -89,6 +132,9 @@ export class DocumentSession {
         throw error;
       }
     }
+    if (this.disposed) {
+      return;
+    }
     this.state = "saved";
     this.error = "";
     this.changed();
@@ -98,5 +144,8 @@ export class DocumentSession {
   dispose() {
     this.disposed = true;
     this.clock.clearTimeout(this.timer);
+    this.pendingSnapshot = null;
+    this.content = null;
+    this.persisted = null;
   }
 }

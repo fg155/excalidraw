@@ -2,17 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-import {
-  Excalidraw,
-  loadFromBlob,
-  serializeAsJSON,
-} from "@excalidraw/excalidraw";
+import { Excalidraw, loadFromBlob } from "@excalidraw/excalidraw";
 
 import type { ImportedDataState } from "@excalidraw/excalidraw/data/types";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 import { repository } from "./repository";
 import { DocumentSession } from "./session";
+import { BoardChanges, serializeBoard } from "./boardSnapshot";
 import { defaults, drawingPreferences, parseSettings } from "./settings";
 import { BoardHome, boardLabel as label } from "./BoardHome";
 import { BackgroundPanel } from "./BackgroundPanel";
@@ -33,6 +30,8 @@ type OpenDocument = {
   key: number;
   initialData: ImportedDataState;
   session: DocumentSession;
+  changes: BoardChanges;
+  needsCompaction: boolean;
 };
 type Panel =
   | "background"
@@ -241,8 +240,14 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
     const next: OpenDocument = {
       key: ++sequence.current,
       session,
+      changes: new BoardChanges(),
+      needsCompaction:
+        data.elements?.some((element) => element.isDeleted) ?? false,
       initialData: {
         ...data,
+        // A reopened document has no previous session's undo stack. Do not load
+        // its historical tombstones into the new editor or its render caches.
+        elements: data.elements?.filter((element) => !element.isDeleted),
         appState: { ...data.appState, ...settingsRef.current.drawing },
         scrollToContent: true,
       },
@@ -458,21 +463,28 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
                   return;
                 }
                 document.session.initialize(
-                  serializeAsJSON(
+                  serializeBoard(
                     value.getSceneElementsIncludingDeleted(),
                     value.getAppState(),
                     value.getFiles(),
-                    "local",
                   ),
+                  document.needsCompaction,
+                );
+                document.changes.update(
+                  value.getSceneElementsIncludingDeleted(),
+                  value.getAppState(),
+                  value.getFiles(),
                 );
               }}
               onChange={(elements, appState, binaryFiles) => {
                 if (active.current !== document) {
                   return;
                 }
-                document.session.update(
-                  serializeAsJSON(elements, appState, binaryFiles, "local"),
-                );
+                if (document.changes.update(elements, appState, binaryFiles)) {
+                  document.session.update(() =>
+                    serializeBoard(elements, appState, binaryFiles),
+                  );
+                }
                 if (settingsWritable.current && !appState.isLoading) {
                   changeSettings({
                     ...settingsRef.current,

@@ -24,6 +24,7 @@ import {
   getResizedElementAbsoluteCoords,
 } from "./bounds";
 import { newElementWith } from "./mutateElement";
+import { layoutMath, normalizeTextMode } from "./latex";
 import {
   normalizeStickyNoteBackgroundColor,
   normalizeStickyNoteStrokeColor,
@@ -336,6 +337,7 @@ export const newTextElement = (
   opts: {
     text: string;
     originalText?: string;
+    textMode?: ExcalidrawTextElement["textMode"];
     fontSize?: number;
     fontFamily?: FontFamilyValues;
     textAlign?: TextAlign;
@@ -351,11 +353,19 @@ export const newTextElement = (
   const fontSize = opts.fontSize || DEFAULT_FONT_SIZE;
   const lineHeight = opts.lineHeight || getLineHeight(fontFamily);
   const text = normalizeText(opts.text);
-  const metrics = measureText(
-    text,
-    getFontString({ fontFamily, fontSize }),
-    lineHeight,
-  );
+  const metrics =
+    opts.textMode === "latex"
+      ? layoutMath(
+          opts.originalText ?? text,
+          {
+            fontFamily,
+            fontSize,
+            lineHeight,
+            textAlign: opts.textAlign || DEFAULT_TEXT_ALIGN,
+          },
+          opts.autoResize === false ? opts.width : Infinity,
+        )
+      : measureText(text, getFontString({ fontFamily, fontSize }), lineHeight);
   const textAlign = opts.textAlign || DEFAULT_TEXT_ALIGN;
   const verticalAlign = opts.verticalAlign || DEFAULT_VERTICAL_ALIGN;
   const offsets = getTextElementPositionOffsets(
@@ -365,6 +375,7 @@ export const newTextElement = (
 
   const textElementProps: NonDeleted<ExcalidrawTextElement> = {
     ..._newElementBase<ExcalidrawTextElement>("text", opts),
+    textMode: normalizeTextMode(opts.textMode),
     text,
     fontSize,
     baseFontSize: opts.baseFontSize ?? null,
@@ -373,7 +384,10 @@ export const newTextElement = (
     verticalAlign,
     x: opts.x - offsets.x,
     y: opts.y - offsets.y,
-    width: metrics.width,
+    width:
+      opts.textMode === "latex" && opts.autoResize === false
+        ? Math.max(metrics.width, opts.width ?? 0)
+        : metrics.width,
     height: metrics.height,
     containerId: opts.containerId || null,
     originalText: opts.originalText ?? text,
@@ -394,17 +408,17 @@ const getAdjustedDimensions = (
   element: ExcalidrawTextElement,
   elementsMap: ElementsMap,
   nextText: string,
+  maxWidth = element.autoResize ? Infinity : element.width,
 ): {
   x: number;
   y: number;
   width: number;
   height: number;
 } => {
-  let { width: nextWidth, height: nextHeight } = measureText(
-    nextText,
-    getFontString(element),
-    element.lineHeight,
-  );
+  let { width: nextWidth, height: nextHeight } =
+    element.textMode === "latex"
+      ? layoutMath(nextText, element, maxWidth)
+      : measureText(nextText, getFontString(element), element.lineHeight);
 
   // wrapped text
   if (!element.autoResize) {
@@ -420,11 +434,10 @@ const getAdjustedDimensions = (
     !element.containerId &&
     element.autoResize
   ) {
-    const prevMetrics = measureText(
-      element.text,
-      getFontString(element),
-      element.lineHeight,
-    );
+    const prevMetrics =
+      element.textMode === "latex"
+        ? { width: element.width, height: element.height }
+        : measureText(element.text, getFontString(element), element.lineHeight);
     const offsets = getTextElementPositionOffsets(element, {
       width: nextWidth - prevMetrics.width,
       height: nextHeight - prevMetrics.height,
@@ -535,7 +548,10 @@ export const refreshTextDimensions = (
   if (textElement.isDeleted) {
     return;
   }
-  if (container || !textElement.autoResize) {
+  if (
+    textElement.textMode !== "latex" &&
+    (container || !textElement.autoResize)
+  ) {
     text = wrapText(
       text,
       getFontString(textElement),
@@ -544,7 +560,16 @@ export const refreshTextDimensions = (
         : textElement.width,
     );
   }
-  const dimensions = getAdjustedDimensions(textElement, elementsMap, text);
+  const dimensions = getAdjustedDimensions(
+    textElement,
+    elementsMap,
+    text,
+    container
+      ? getBoundTextMaxWidth(container, textElement)
+      : textElement.autoResize
+      ? Infinity
+      : textElement.width,
+  );
   return { text, ...dimensions };
 };
 

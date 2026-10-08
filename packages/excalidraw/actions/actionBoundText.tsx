@@ -35,6 +35,7 @@ import {
 } from "@excalidraw/element";
 
 import { measureText } from "@excalidraw/element";
+import { layoutMath } from "@excalidraw/element/latex";
 
 import { syncMovedIndices } from "@excalidraw/element";
 
@@ -72,11 +73,14 @@ export const actionUnbindText = register({
     selectedElements.forEach((element) => {
       const boundTextElement = getBoundTextElement(element, elementsMap);
       if (boundTextElement) {
-        const { width, height } = measureText(
-          boundTextElement.originalText,
-          getFontString(boundTextElement),
-          boundTextElement.lineHeight,
-        );
+        const { width, height } =
+          boundTextElement.textMode === "latex"
+            ? layoutMath(boundTextElement.originalText, boundTextElement)
+            : measureText(
+                boundTextElement.originalText,
+                getFontString(boundTextElement),
+                boundTextElement.lineHeight,
+              );
         const originalContainerHeight = getOriginalContainerHeightFromCache(
           element.id,
         );

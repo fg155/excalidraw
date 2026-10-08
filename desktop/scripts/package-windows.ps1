@@ -22,6 +22,12 @@ Get-ChildItem -LiteralPath $buildRoot -Filter '*.dll' -File | ForEach-Object {
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'LICENSE') -Destination (Join-Path $packageRoot 'LICENSE.txt')
 Copy-Item -LiteralPath (Join-Path $desktopRoot 'WINDOWS-PREVIEW.zh-CN.txt') -Destination (Join-Path $packageRoot 'README.zh-CN.txt')
 
+$mathLicenseRoot = Join-Path $packageRoot 'licenses/mathjax'
+New-Item -ItemType Directory -Path $mathLicenseRoot | Out-Null
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'node_modules/@mathjax/src/LICENSE') -Destination (Join-Path $mathLicenseRoot 'Apache-2.0.txt')
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'node_modules/@mathjax/mathjax-tex-font/package.json') -Destination (Join-Path $mathLicenseRoot 'mathjax-tex-font-package.json')
+Copy-Item -LiteralPath (Join-Path $desktopRoot 'MATH-NOTICES.txt') -Destination $mathLicenseRoot
+
 # Upstream font copyright/license texts are embedded in family index.ts comments.
 # Preserve those verbatim, alongside any standalone license files.
 $fontsRoot = Join-Path $repositoryRoot 'packages/excalidraw/fonts'

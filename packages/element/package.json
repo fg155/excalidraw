@@ -63,6 +63,8 @@
     "build:esm": "rimraf dist && node ../../scripts/buildBase.js && yarn gen:types"
   },
   "dependencies": {
+    "@mathjax/src": "4.1.3",
+    "@mathjax/mathjax-tex-font": "4.1.3",
     "@excalidraw/common": "0.18.0",
     "@excalidraw/math": "0.18.0",
     "@excalidraw/fractional-indexing": "3.3.0"

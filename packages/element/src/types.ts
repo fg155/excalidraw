@@ -253,6 +253,7 @@ export type NonDeletedExcalidrawElement = NonDeleted<ExcalidrawElement>;
 export type ExcalidrawTextElement = _ExcalidrawElementBase &
   Readonly<{
     type: "text";
+    textMode?: "plain" | "latex";
     fontSize: number;
     fontFamily: FontFamilyValues;
     /**

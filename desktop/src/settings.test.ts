@@ -12,6 +12,7 @@ describe("portable settings", () => {
         currentItemCustomStrokeWidth: 7.5,
         currentItemStrokeColor: "#abcd",
         currentItemOpacity: 55,
+        currentItemTextMode: "latex",
         fileHandle: "private",
         width: 900,
       },
@@ -23,6 +24,7 @@ describe("portable settings", () => {
       currentItemCustomStrokeWidth: 7.5,
       currentItemStrokeColor: "#abcd",
       currentItemOpacity: 55,
+      currentItemTextMode: "latex",
     });
     expect(parseSettings(exported)).toEqual(parsed);
   });
@@ -34,6 +36,7 @@ describe("portable settings", () => {
 
   it.each([
     { holdMs: 0 },
+    { drawing: { currentItemTextMode: "global" } },
     { holdMs: Infinity },
     { theme: "anything" },
     { drawing: { currentItemOpacity: NaN } },

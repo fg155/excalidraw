@@ -1,3 +1,4 @@
+import { appendMathSvg } from "@excalidraw/element/latex";
 import {
   BOUND_TEXT_PADDING,
   FRAME_STYLE,
@@ -786,48 +787,59 @@ const renderElementToSvg = (
             offsetY || 0
           }) rotate(${degree} ${cx} ${cy})`,
         );
-        const lines = element.text.replace(/\r\n?/g, "\n").split("\n");
-        const lineHeightPx = getLineHeightInPx(
-          element.fontSize,
-          element.lineHeight,
-        );
-        const horizontalOffset =
-          element.textAlign === "center"
-            ? element.width / 2
-            : element.textAlign === "right"
-            ? element.width
-            : 0;
-        const verticalOffset = getVerticalOffset(
-          element.fontFamily,
-          element.fontSize,
-          lineHeightPx,
-        );
-        const direction = isRTL(element.text) ? "rtl" : "ltr";
-        const textAnchor =
-          element.textAlign === "center"
-            ? "middle"
-            : element.textAlign === "right" || direction === "rtl"
-            ? "end"
-            : "start";
-        for (let i = 0; i < lines.length; i++) {
-          const text = svgRoot.ownerDocument.createElementNS(SVG_NS, "text");
-          text.textContent = lines[i];
-          text.setAttribute("x", `${horizontalOffset}`);
-          text.setAttribute("y", `${i * lineHeightPx + verticalOffset}`);
-          text.setAttribute("font-family", getFontFamilyString(element));
-          text.setAttribute("font-size", `${element.fontSize}px`);
-          text.setAttribute(
-            "fill",
+        if (element.textMode === "latex") {
+          appendMathSvg(
+            node,
+            element,
             applyDarkModeFilter(
               element.strokeColor,
               renderConfig.theme === THEME.DARK,
             ),
           );
-          text.setAttribute("text-anchor", textAnchor);
-          text.setAttribute("style", "white-space: pre;");
-          text.setAttribute("direction", direction);
-          text.setAttribute("dominant-baseline", "alphabetic");
-          node.appendChild(text);
+        } else {
+          const lines = element.text.replace(/\r\n?/g, "\n").split("\n");
+          const lineHeightPx = getLineHeightInPx(
+            element.fontSize,
+            element.lineHeight,
+          );
+          const horizontalOffset =
+            element.textAlign === "center"
+              ? element.width / 2
+              : element.textAlign === "right"
+              ? element.width
+              : 0;
+          const verticalOffset = getVerticalOffset(
+            element.fontFamily,
+            element.fontSize,
+            lineHeightPx,
+          );
+          const direction = isRTL(element.text) ? "rtl" : "ltr";
+          const textAnchor =
+            element.textAlign === "center"
+              ? "middle"
+              : element.textAlign === "right" || direction === "rtl"
+              ? "end"
+              : "start";
+          for (let i = 0; i < lines.length; i++) {
+            const text = svgRoot.ownerDocument.createElementNS(SVG_NS, "text");
+            text.textContent = lines[i];
+            text.setAttribute("x", `${horizontalOffset}`);
+            text.setAttribute("y", `${i * lineHeightPx + verticalOffset}`);
+            text.setAttribute("font-family", getFontFamilyString(element));
+            text.setAttribute("font-size", `${element.fontSize}px`);
+            text.setAttribute(
+              "fill",
+              applyDarkModeFilter(
+                element.strokeColor,
+                renderConfig.theme === THEME.DARK,
+              ),
+            );
+            text.setAttribute("text-anchor", textAnchor);
+            text.setAttribute("style", "white-space: pre;");
+            text.setAttribute("direction", direction);
+            text.setAttribute("dominant-baseline", "alphabetic");
+            node.appendChild(text);
+          }
         }
 
         const g = maybeWrapNodesInFrameClipPath(

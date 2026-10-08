@@ -1,0 +1,10 @@
+The offline formula renderer uses MathJax 4.1.3 and MathJax TeX font 4.1.3.
+Packages: @mathjax/src and @mathjax/mathjax-tex-font
+License: Apache License, Version 2.0 (included as Apache-2.0.txt).
+Upstream: https://github.com/mathjax/MathJax-src
+Font source: https://github.com/mathjax/MathJax-fonts
+
+Only the TeX base/AMS parser, SVG renderer and classic TeX SVG font data are
+bundled. No system TeX distribution, remote typesetting service, or runtime
+font download is used. This application adapts the generated SVG geometry
+for its text-block layout, Canvas rendering and SVG exports.

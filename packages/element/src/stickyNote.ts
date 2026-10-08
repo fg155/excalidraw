@@ -26,6 +26,7 @@ import { getPositionAfterHeightChange } from "./sizeHelpers";
 import { computeBoundTextPosition, getBoundTextElement } from "./textElement";
 import { measureText } from "./textMeasurements";
 import { wrapText } from "./textWrapping";
+import { layoutMath } from "./latex";
 import { isStickyNoteElement, isTextElement } from "./typeChecks";
 
 import type { Scene } from "./Scene";
@@ -701,6 +702,13 @@ export const getStickyNoteLayout = (
   const { fontFamily, lineHeight } = textElement;
 
   const fit = (fontSize: number): FontFit => {
+    if (textElement.textMode === "latex") {
+      return {
+        text: originalText,
+        fontSize,
+        ...layoutMath(originalText, { ...textElement, fontSize }, maxWidth),
+      };
+    }
     const font = getFontString({ fontFamily, fontSize });
     const text = wrapText(originalText, font, maxWidth);
     return { text, fontSize, ...measureText(text, font, lineHeight) };
@@ -868,6 +876,7 @@ const STICKY_NOTE_LAYOUT_INPUTS = {
   container: ["x", "y", "width", "baseHeight", "angle"],
   text: [
     "originalText",
+    "textMode",
     "baseFontSize",
     "fontFamily",
     "lineHeight",

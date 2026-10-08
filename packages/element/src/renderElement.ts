@@ -46,6 +46,8 @@ import type {
   InteractiveCanvasRenderConfig,
 } from "@excalidraw/excalidraw/scene/types";
 
+import { drawMathText } from "./latex";
+
 import { getElementAbsoluteCoords, getElementBounds } from "./bounds";
 import { getUncroppedImageElement } from "./cropElement";
 import { LinearElementEditor } from "./linearElementEditor";
@@ -641,34 +643,37 @@ const drawElementOnCanvas = (
           renderConfig.theme === THEME.DARK,
         );
         context.textAlign = element.textAlign as CanvasTextAlign;
+        if (element.textMode === "latex") {
+          drawMathText(context, element);
+        } else {
+          // Canvas does not support multiline text by default
+          const lines = element.text.replace(/\r\n?/g, "\n").split("\n");
 
-        // Canvas does not support multiline text by default
-        const lines = element.text.replace(/\r\n?/g, "\n").split("\n");
+          const horizontalOffset =
+            element.textAlign === "center"
+              ? element.width / 2
+              : element.textAlign === "right"
+              ? element.width
+              : 0;
 
-        const horizontalOffset =
-          element.textAlign === "center"
-            ? element.width / 2
-            : element.textAlign === "right"
-            ? element.width
-            : 0;
-
-        const lineHeightPx = getLineHeightInPx(
-          element.fontSize,
-          element.lineHeight,
-        );
-
-        const verticalOffset = getVerticalOffset(
-          element.fontFamily,
-          element.fontSize,
-          lineHeightPx,
-        );
-
-        for (let index = 0; index < lines.length; index++) {
-          context.fillText(
-            lines[index],
-            horizontalOffset,
-            index * lineHeightPx + verticalOffset,
+          const lineHeightPx = getLineHeightInPx(
+            element.fontSize,
+            element.lineHeight,
           );
+
+          const verticalOffset = getVerticalOffset(
+            element.fontFamily,
+            element.fontSize,
+            lineHeightPx,
+          );
+
+          for (let index = 0; index < lines.length; index++) {
+            context.fillText(
+              lines[index],
+              horizontalOffset,
+              index * lineHeightPx + verticalOffset,
+            );
+          }
         }
         context.restore();
         if (shouldTemporarilyAttach) {

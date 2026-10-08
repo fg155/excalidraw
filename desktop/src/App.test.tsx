@@ -122,6 +122,34 @@ async function openExisting() {
 }
 
 describe("desktop shell with real editor and mocked native IPC", () => {
+  it("flushes the last text mode on close and restores it alongside per-block modes", async () => {
+    const view = mount();
+    await openExisting();
+    const text = API.createElement({ type: "text", text: "$x^2$" });
+    API.setElements([text]);
+    API.setSelectedElements([text]);
+    fireEvent.click(screen.getByTestId("text-mode-latex"));
+    const close = native.onCloseRequested.mock.calls[0][0];
+    await act(async () => {
+      await close({ preventDefault: vi.fn() });
+    });
+    expect(JSON.parse(storedSettings!).drawing.currentItemTextMode).toBe(
+      "latex",
+    );
+    expect(
+      JSON.parse(boards.get("existing.excalidraw")!.content).elements[0]
+        .textMode,
+    ).toBe("latex");
+    view.unmount();
+    mount();
+    await openExisting();
+    expect(window.h.state.currentItemTextMode).toBe("latex");
+    expect(window.h.elements[0]).toMatchObject({
+      textMode: "latex",
+      originalText: "$x^2$",
+    });
+  });
+
   it("loads an old file without tombstones and compacts only when saved", async () => {
     const live = API.createElement({ type: "rectangle" });
     const deleted = API.createElement({ type: "ellipse", isDeleted: true });

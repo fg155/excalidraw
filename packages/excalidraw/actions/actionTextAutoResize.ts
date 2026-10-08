@@ -1,4 +1,5 @@
 import { getFontString } from "@excalidraw/common";
+import { layoutMath } from "@excalidraw/element/latex";
 
 import {
   getTextAnchorRatios,
@@ -48,11 +49,14 @@ export const actionTextAutoResize = register({
       return false;
     }
 
-    const metrics = measureText(
-      target.originalText,
-      getFontString(target),
-      target.lineHeight,
-    );
+    const metrics =
+      target.textMode === "latex"
+        ? layoutMath(target.originalText, target)
+        : measureText(
+            target.originalText,
+            getFontString(target),
+            target.lineHeight,
+          );
 
     // unwrapping resizes the box, so keep the point the text's alignment pins
     // — otherwise a right-aligned or centred text slides sideways, and one

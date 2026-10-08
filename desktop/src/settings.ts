@@ -34,6 +34,7 @@ export const drawingPreferences = (
       currentItemRoughness: state.currentItemRoughness,
       currentItemOpacity: state.currentItemOpacity,
       currentItemFontFamily: state.currentItemFontFamily,
+      currentItemTextMode: state.currentItemTextMode,
       currentItemFontSize: state.currentItemFontSize,
       currentItemStrokeVariability: state.currentItemStrokeVariability,
     }).filter(([, value]) => value !== undefined),
@@ -65,6 +66,13 @@ export function parseSettings(value: unknown): Settings {
   }
   const drawing = drawingPreferences((d || {}) as Partial<AppState>);
   for (const [key, value] of Object.entries(drawing)) {
+    if (
+      key === "currentItemTextMode" &&
+      value !== "plain" &&
+      value !== "latex"
+    ) {
+      throw new Error("文字模式无效");
+    }
     if (value === undefined) {
       continue;
     }

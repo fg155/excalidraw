@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { layoutMath, normalizeTextMode } from "@excalidraw/element/latex";
 import throttle from "lodash.throttle";
 import React, { useContext } from "react";
 import { flushSync } from "react-dom";
@@ -4288,6 +4289,29 @@ class App extends React.Component<AppProps, AppState> {
     const elements = this.scene.getElementsIncludingDeleted();
     const elementsMap = this.scene.getElementsMapIncludingDeleted();
 
+    if (
+      prevState.selectedElementIds !== this.state.selectedElementIds ||
+      prevState.editingTextElement?.id !== this.state.editingTextElement?.id
+    ) {
+      const selectedIds = Object.keys(this.state.selectedElementIds);
+      const selected =
+        this.state.editingTextElement ||
+        (selectedIds.length === 1 ? elementsMap.get(selectedIds[0]) : null);
+      const text =
+        selected &&
+        (isTextElement(selected)
+          ? selected
+          : getBoundTextElement(selected, elementsMap));
+      if (
+        text &&
+        normalizeTextMode(text.textMode) !== this.state.currentItemTextMode
+      ) {
+        this.setState({
+          currentItemTextMode: normalizeTextMode(text.textMode),
+        });
+      }
+    }
+
     const shouldExportWithDarkMode =
       (this.sessionExportThemeOverride ?? this.state.theme) === THEME.DARK;
 
@@ -5051,6 +5075,7 @@ class App extends React.Component<AppProps, AppState> {
       fontSize: this.state.currentItemFontSize,
       fontFamily: this.state.currentItemFontFamily,
       textAlign: DEFAULT_TEXT_ALIGN,
+      textMode: this.state.currentItemTextMode,
       verticalAlign: DEFAULT_VERTICAL_ALIGN,
       locked: false,
     };
@@ -5065,7 +5090,10 @@ class App extends React.Component<AppProps, AppState> {
     const LINE_GAP = 10;
     let currentY = y;
 
-    const lines = isPlainPaste ? [text] : text.split("\n");
+    const lines =
+      isPlainPaste || textElementProps.textMode === "latex"
+        ? [text]
+        : text.split("\n");
     const textElements = lines.reduce(
       (acc: ExcalidrawTextElement[], line, idx) => {
         const originalText = normalizeText(line).trim();
@@ -5075,16 +5103,27 @@ class App extends React.Component<AppProps, AppState> {
             y: currentY,
           });
 
-          let metrics = measureText(originalText, fontString, lineHeight);
+          let metrics =
+            textElementProps.textMode === "latex"
+              ? layoutMath(originalText, { ...textElementProps, lineHeight })
+              : measureText(originalText, fontString, lineHeight);
           const isTextUnwrapped = metrics.width > maxTextWidth;
 
-          const text = isTextUnwrapped
-            ? wrapText(originalText, fontString, maxTextWidth)
-            : originalText;
+          const text =
+            isTextUnwrapped && textElementProps.textMode !== "latex"
+              ? wrapText(originalText, fontString, maxTextWidth)
+              : originalText;
 
-          metrics = isTextUnwrapped
-            ? measureText(text, fontString, lineHeight)
-            : metrics;
+          metrics =
+            textElementProps.textMode === "latex"
+              ? layoutMath(
+                  originalText,
+                  { ...textElementProps, lineHeight },
+                  maxTextWidth,
+                )
+              : isTextUnwrapped
+              ? measureText(text, fontString, lineHeight)
+              : metrics;
 
           const startX = x - metrics.width / 2;
           const startY = currentY - metrics.height / 2;
@@ -5097,6 +5136,7 @@ class App extends React.Component<AppProps, AppState> {
             originalText,
             lineHeight,
             autoResize: !isTextUnwrapped,
+            width: Math.max(metrics.width, isTextUnwrapped ? maxTextWidth : 0),
             frameId: topLayerFrame ? topLayerFrame.id : null,
           });
           acc.push(element);
@@ -7119,6 +7159,7 @@ class App extends React.Component<AppProps, AppState> {
         opacity: this.state.currentItemOpacity,
         text: "",
         fontSize,
+        textMode: this.state.currentItemTextMode,
         baseFontSize:
           shouldBindToContainer && isStickyNoteElement(container)
             ? fontSize

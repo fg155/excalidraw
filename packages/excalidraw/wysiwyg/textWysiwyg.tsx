@@ -39,6 +39,7 @@ import { getLineHeightInPx } from "@excalidraw/element";
 import { getLineWidth } from "@excalidraw/element";
 import { normalizeText } from "@excalidraw/element";
 import { wrapText } from "@excalidraw/element";
+import { measureText } from "@excalidraw/element/textMeasurements";
 import { getWrappedTextLines } from "@excalidraw/element";
 import {
   isArrowElement,
@@ -395,6 +396,31 @@ export const textWysiwyg = ({
       height *= 1.05;
 
       const font = getFontString(updatedTextElement);
+      if (updatedTextElement.textMode === "latex") {
+        // Edit source, not rendered glyph positions. Keep this editor-only size
+        // separate from the formula's canvas bounds and its container geometry.
+        maxWidth = Math.max(
+          100,
+          (appState.width - 8 - viewportX) / appState.zoom.value,
+        );
+        const source = measureText(
+          editable.value,
+          font,
+          updatedTextElement.lineHeight,
+        );
+        width = Math.min(
+          maxWidth,
+          Math.max(200, source.width + updatedTextElement.fontSize),
+        );
+        height = Math.max(
+          updatedTextElement.fontSize * updatedTextElement.lineHeight,
+          measureText(
+            wrapText(editable.value, font, width),
+            font,
+            updatedTextElement.lineHeight,
+          ).height * 1.1,
+        );
+      }
       const angle = getTextElementAngle(updatedTextElement, container);
 
       // Make sure text editor height doesn't go beyond viewport
@@ -489,7 +515,11 @@ export const textWysiwyg = ({
   updateWysiwygStyle();
 
   const getCaretIndexFromInitialSceneCoords = () => {
-    if (!initialCaretSceneCoords || !currentTextLayout) {
+    if (
+      element.textMode === "latex" ||
+      !initialCaretSceneCoords ||
+      !currentTextLayout
+    ) {
       return null;
     }
 

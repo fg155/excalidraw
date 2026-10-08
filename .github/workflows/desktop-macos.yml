@@ -54,7 +54,7 @@ jobs:
 
       - name: Test desktop save flows and drawing gestures
         run: >-
-          yarn vitest run desktop/src/App.test.tsx desktop/src/session.test.ts desktop/src/boardSnapshot.test.ts desktop/src/settings.test.ts packages/excalidraw/tests/paperGrid.test.ts packages/excalidraw/tests/straightInk.test.ts packages/excalidraw/tests/straightInkInteraction.test.tsx packages/excalidraw/tests/straightInkPen.test.tsx packages/excalidraw/tests/freedrawMode.test.tsx packages/excalidraw/tests/strokeWidth.test.tsx packages/excalidraw/tests/imageEraser.test.tsx packages/excalidraw/actions/actionProperties.test.tsx packages/element/tests/delta.test.tsx
+          yarn vitest run desktop/src/App.test.tsx desktop/src/session.test.ts desktop/src/boardSnapshot.test.ts desktop/src/settings.test.ts packages/excalidraw/tests/latex.test.tsx packages/excalidraw/tests/paperGrid.test.ts packages/excalidraw/tests/straightInk.test.ts packages/excalidraw/tests/straightInkInteraction.test.tsx packages/excalidraw/tests/straightInkPen.test.tsx packages/excalidraw/tests/freedrawMode.test.tsx packages/excalidraw/tests/strokeWidth.test.tsx packages/excalidraw/tests/imageEraser.test.tsx packages/excalidraw/actions/actionProperties.test.tsx packages/element/tests/delta.test.tsx
 
 
       - name: Set up Apple Silicon Rust (on the temporary GitHub runner only)
@@ -114,6 +114,10 @@ jobs:
           cp "${installers[0]}" "$package/"
           cp LICENSE "$package/LICENSE.txt"
           cp desktop/MACOS-PREVIEW.zh-CN.txt "$package/README.zh-CN.txt"
+          mkdir -p "$package/licenses/mathjax"
+          cp node_modules/@mathjax/src/LICENSE "$package/licenses/mathjax/Apache-2.0.txt"
+          cp node_modules/@mathjax/mathjax-tex-font/package.json "$package/licenses/mathjax/mathjax-tex-font-package.json"
+          cp desktop/MATH-NOTICES.txt "$package/licenses/mathjax/"
           # Upstream font license/copyright texts also live in index.ts comments.
           fonts="packages/excalidraw/fonts"
           while IFS= read -r -d '' source; do

@@ -45,6 +45,7 @@ import {
 } from "@excalidraw/common";
 
 import { measureText } from "@excalidraw/element";
+import { layoutMath } from "@excalidraw/element/latex";
 
 import { LinearElementEditor } from "@excalidraw/element";
 
@@ -377,11 +378,14 @@ export const adjustBoundTextSize = (
     maxWidth,
   );
 
-  let metrics = measureText(
-    wrappedText,
-    getFontString(boundText),
-    boundText.lineHeight,
-  );
+  let metrics =
+    boundText.textMode === "latex"
+      ? layoutMath(boundText.originalText, boundText, maxWidth)
+      : measureText(
+          wrappedText,
+          getFontString(boundText),
+          boundText.lineHeight,
+        );
 
   let nextFontSize = boundText.fontSize;
   while (
@@ -393,11 +397,14 @@ export const adjustBoundTextSize = (
       ...boundText,
       fontSize: nextFontSize,
     };
-    metrics = measureText(
-      boundText.text,
-      getFontString(_updatedTextElement),
-      boundText.lineHeight,
-    );
+    metrics =
+      boundText.textMode === "latex"
+        ? layoutMath(boundText.originalText, _updatedTextElement, maxWidth)
+        : measureText(
+            boundText.text,
+            getFontString(_updatedTextElement),
+            boundText.lineHeight,
+          );
   }
 
   mutateElement(boundText, scene.getNonDeletedElementsMap(), {

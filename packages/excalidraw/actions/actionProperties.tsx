@@ -1595,6 +1595,95 @@ export const actionChangeFontFamily = register<{
   },
 });
 
+export const actionChangeTextMode = register<"plain" | "latex">({
+  name: "changeTextMode",
+  label: "文字模式",
+  trackEvent: false,
+  perform: (elements, appState, value, app) => ({
+    elements: changeProperty(
+      elements,
+      appState,
+      (element) => {
+        if (!isTextElement(element)) {
+          return element;
+        }
+        const updated = newElementWith(element, {
+          textMode: value,
+          text: element.originalText,
+        });
+        redrawTextBoundingBox(
+          updated,
+          app.scene.getContainerElement(element),
+          app.scene,
+        );
+        return updated;
+      },
+      true,
+    ),
+    appState: { ...appState, currentItemTextMode: value },
+    captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+  }),
+  PanelComponent: ({ elements, appState, updateData, app, data }) => {
+    const elementsMap = app.scene.getNonDeletedElementsMap();
+    const { isCompact } = getStylesPanelInfo(app);
+    if (
+      !appState.editingTextElement &&
+      !elements.some(
+        (el) =>
+          appState.selectedElementIds[el.id] &&
+          (isTextElement(el) || getBoundTextElement(el, elementsMap)),
+      )
+    ) {
+      return null;
+    }
+    return (
+      <fieldset>
+        <legend>文字模式</legend>
+        <div className="buttonList">
+          <RadioSelection<"plain" | "latex">
+            group="text-mode"
+            options={[
+              {
+                value: "plain",
+                text: "普通文字",
+                icon: <span>文字</span>,
+                testId: "text-mode-plain",
+              },
+              {
+                value: "latex",
+                text: "LaTeX",
+                icon: <span>LaTeX</span>,
+                testId: "text-mode-latex",
+              },
+            ]}
+            value={getFormValue(
+              elements,
+              app,
+              (el) => {
+                const text = isTextElement(el)
+                  ? el
+                  : getBoundTextElement(el, elementsMap);
+                return text ? text.textMode ?? "plain" : null;
+              },
+              (el) =>
+                isTextElement(el) || !!getBoundTextElement(el, elementsMap),
+              null,
+            )}
+            onChange={(value) =>
+              withCaretPositionPreservation(
+                () => updateData(value),
+                isCompact,
+                !!appState.editingTextElement,
+                data?.onPreventClose,
+              )
+            }
+          />
+        </div>
+      </fieldset>
+    );
+  },
+});
+
 export const actionChangeTextAlign = register<TextAlign>({
   name: "changeTextAlign",
   label: "Change text alignment",

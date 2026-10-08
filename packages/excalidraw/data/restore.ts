@@ -569,6 +569,7 @@ export const restoreElement = (
       element = restoreElementWithProperties(element, {
         fontSize,
         fontFamily,
+        textMode: element.textMode === "latex" ? "latex" : "plain",
         text,
         textAlign: element.textAlign || DEFAULT_TEXT_ALIGN,
         verticalAlign: element.verticalAlign || DEFAULT_VERTICAL_ALIGN,
@@ -1311,6 +1312,8 @@ export const restoreAppState = (
     ...nextAppState,
     cursorButton: localAppState?.cursorButton || "up",
     paperGrid: normalizePaperGrid(nextAppState.paperGrid),
+    currentItemTextMode:
+      nextAppState.currentItemTextMode === "latex" ? "latex" : "plain",
     currentItemCustomStrokeWidth: normalizeCustomStrokeWidth(
       nextAppState.currentItemCustomStrokeWidth,
     ),

@@ -25,6 +25,7 @@ import { getPositionAfterHeightChange } from "./sizeHelpers";
 
 import { updateStickyNoteLayout } from "./stickyNote";
 import { measureText } from "./textMeasurements";
+import { layoutMath, invalidateMathLayout } from "./latex";
 import { wrapText } from "./textWrapping";
 import {
   isBoundToContainer,
@@ -53,6 +54,7 @@ export const redrawTextBoundingBox = (
   container: ExcalidrawElement | null,
   scene: Scene,
 ) => {
+  invalidateMathLayout(textElement);
   const elementsMap = scene.getNonDeletedElementsMap();
 
   if (container && isStickyNoteElement(container)) {
@@ -91,18 +93,24 @@ export const redrawTextBoundingBox = (
     maxWidth = container
       ? getBoundTextMaxWidth(container, textElement)
       : textElement.width;
-    boundTextUpdates.text = wrapText(
-      textElement.originalText,
-      getFontString(textElement),
-      maxWidth,
-    );
+    boundTextUpdates.text =
+      textElement.textMode === "latex"
+        ? textElement.originalText
+        : wrapText(
+            textElement.originalText,
+            getFontString(textElement),
+            maxWidth,
+          );
   }
 
-  const metrics = measureText(
-    boundTextUpdates.text,
-    getFontString(textElement),
-    textElement.lineHeight,
-  );
+  const metrics =
+    textElement.textMode === "latex"
+      ? layoutMath(textElement.originalText, textElement, maxWidth)
+      : measureText(
+          boundTextUpdates.text,
+          getFontString(textElement),
+          textElement.lineHeight,
+        );
 
   // Note: only update width for unwrapped text and bound texts (which always have autoResize set to true)
   if (textElement.autoResize) {
@@ -189,17 +197,23 @@ export const handleBindTextResize = (
       (transformHandleType !== "n" && transformHandleType !== "s")
     ) {
       if (text) {
-        text = wrapText(
-          textElement.originalText,
-          getFontString(textElement),
-          maxWidth,
-        );
+        text =
+          textElement.textMode === "latex"
+            ? textElement.originalText
+            : wrapText(
+                textElement.originalText,
+                getFontString(textElement),
+                maxWidth,
+              );
       }
-      const metrics = measureText(
-        text,
-        getFontString(textElement),
-        textElement.lineHeight,
-      );
+      const metrics =
+        textElement.textMode === "latex"
+          ? layoutMath(text, textElement, maxWidth)
+          : measureText(
+              text,
+              getFontString(textElement),
+              textElement.lineHeight,
+            );
       nextHeight = metrics.height;
       nextWidth = metrics.width;
     }

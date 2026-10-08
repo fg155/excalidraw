@@ -19,6 +19,7 @@ import { restoreElements, restoreAppState } from "../data/restore";
 import { createPasteEvent, serializeAsClipboardJSON } from "../clipboard";
 import { exportToSvg } from "../scene/export";
 import { getDefaultAppState } from "../appState";
+import { Fonts } from "../fonts";
 
 import { API } from "./helpers/api";
 import { UI } from "./helpers/ui";
@@ -96,10 +97,30 @@ describe("offline math layout", () => {
       autoResize: false,
       width: 420,
     });
-    const svg = await exportToSvg([element], getDefaultAppState(), {});
-    expect(svg.querySelectorAll("path").length).toBeGreaterThan(10);
-    expect(svg.textContent).not.toContain("\\mathrm");
-    expect(svg.querySelector("foreignObject, image, script")).toBeNull();
+    // This checks formula geometry, not prose font IO/WOFF2 subsetting. The
+    // latter can exhaust Vitest's 5s budget on a cold macOS CI runner. Keep the
+    // real exporter and math renderer, but explicitly exclude font packaging.
+    const inlineFonts = vi
+      .spyOn(Fonts, "generateFontFaceDeclarations")
+      .mockImplementation(async () => {
+        throw new Error("Formula geometry test must not package prose fonts");
+      });
+    try {
+      const svg = await exportToSvg(
+        [element],
+        getDefaultAppState(),
+        {},
+        {
+          skipInliningFonts: true,
+        },
+      );
+      expect(inlineFonts).not.toHaveBeenCalled();
+      expect(svg.querySelectorAll("path").length).toBeGreaterThan(10);
+      expect(svg.textContent).not.toContain("\\mathrm");
+      expect(svg.querySelector("foreignObject, image, script")).toBeNull();
+    } finally {
+      inlineFonts.mockRestore();
+    }
   });
 
   it("preserves matrix rules and Chinese text inside formulas", () => {

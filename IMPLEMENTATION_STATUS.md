@@ -1,5 +1,10 @@
 # Implementation checkpoint — per-block offline LaTeX
 
+## Text-safe eraser (2026-10-15)
+
+- Eraser tap, drag and pen hardware erasing skip both plain and LaTeX text, alongside the existing image protection. Group expansion cannot erase protected content. Erasing a frame or text container leaves its text in place and detaches the removed parent; undo/redo restores the relationships. Text is not dimmed by the erasure preview, including when its frame is pending erasure. Explicit selection/Delete remains available.
+- Added 16 regression cases to the existing image-erasure suite, already included in both platform workflows. All 236 tests passed across the 14 CI frontend suites plus render-override tests. Root/desktop TypeScript, targeted ESLint and diff whitespace checks passed. Physical pen hardware and a newly compiled native app were not tested; no GitHub push or workflow dispatch. User must push and download a fresh build to use the change.
+
 ## Text mode revision (2026-10-08)
 
 - Follow-up CI fix: the first user-pushed macOS run timed out (5,000 ms) in the new real-SVG-export test, before native compilation. That test unnecessarily bundled/subsetted the mixed paragraph's prose fonts, which already took roughly four seconds locally. It now calls the real exporter with `skipInliningFonts: true` and asserts font packaging is never invoked; formula conversion, vector-path assertions and prose remain real. No production export code, global timeout or workflow test coverage was changed. The separate ordinary SVG export suite still exercises font embedding. The complete 11-test LaTeX file now took 711 ms in a local validation run; macOS must be checked by pushing the fix and starting a new CI run.

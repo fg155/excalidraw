@@ -187,10 +187,11 @@ export const resolveElementRenderState = (
   let opacity =
     (frameOpacity * clamp(override?.opacity ?? element.opacity, 0, 100)) /
     10000;
+  const eraserProtected = isImageElement(element) || isTextElement(element);
   if (
-    (!isImageElement(element) && elementsPendingErasure.has(element.id)) ||
+    (!eraserProtected && elementsPendingErasure.has(element.id)) ||
     pendingFlowchartNodes?.some((node) => node.id === element.id) ||
-    (!isImageElement(element) &&
+    (!eraserProtected &&
       containingFrame &&
       elementsPendingErasure.has(containingFrame.id))
   ) {

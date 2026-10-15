@@ -434,7 +434,7 @@ import { textWysiwyg } from "../wysiwyg/textWysiwyg";
 import { isOverScrollBars } from "../scene/scrollbars";
 import { isMaybeMermaidDefinition } from "../mermaid";
 import { LassoTrail } from "../lasso";
-import { EraserTrail } from "../eraser";
+import { EraserTrail, isEraserProtectedElement } from "../eraser";
 import { getShortcutKey } from "../shortcut";
 import { tryParseSpreadsheet } from "../charts";
 
@@ -12487,7 +12487,7 @@ class App extends React.Component<AppProps, AppState> {
             scenePointer.y,
           );
           hitElements.forEach((hitElement) => {
-            if (!isImageElement(hitElement)) {
+            if (!isEraserProtectedElement(hitElement)) {
               this.elementsPendingErasure.add(hitElement.id);
             }
           });
@@ -12844,7 +12844,7 @@ class App extends React.Component<AppProps, AppState> {
     let didChange = false;
     this.elementsPendingErasure = new Set(
       [...this.elementsPendingErasure].filter(
-        (id) => !isImageElement(this.scene.getElement(id)),
+        (id) => !isEraserProtectedElement(this.scene.getElement(id)),
       ),
     );
 
@@ -12908,21 +12908,30 @@ class App extends React.Component<AppProps, AppState> {
       }
     });
 
+    const willErase = (element: ExcalidrawElement) =>
+      this.elementsPendingErasure.has(element.id) ||
+      !!(element.frameId && this.elementsPendingErasure.has(element.frameId));
+
     const elements = this.scene.getElementsIncludingDeleted().map((ele) => {
-      if (isImageElement(ele)) {
-        // Erasing a frame must not erase its images or leave them in a deleted frame.
-        if (ele.frameId && this.elementsPendingErasure.has(ele.frameId)) {
+      if (isEraserProtectedElement(ele)) {
+        // Keep protected content, detaching it from erased frames/containers.
+        const detachFrame =
+          ele.frameId && this.elementsPendingErasure.has(ele.frameId);
+        const container =
+          isTextElement(ele) && ele.containerId
+            ? this.scene.getElement(ele.containerId)
+            : null;
+        const detachContainer = container && willErase(container);
+        if (detachFrame || detachContainer) {
           didChange = true;
-          return newElementWith(ele, { frameId: null });
+          return newElementWith(ele, {
+            ...(detachFrame ? { frameId: null } : {}),
+            ...(detachContainer ? { containerId: null } : {}),
+          });
         }
         return ele;
       }
-      if (
-        this.elementsPendingErasure.has(ele.id) ||
-        (ele.frameId && this.elementsPendingErasure.has(ele.frameId)) ||
-        (isBoundToContainer(ele) &&
-          this.elementsPendingErasure.has(ele.containerId))
-      ) {
+      if (willErase(ele)) {
         didChange = true;
         return newElementWith(ele, { isDeleted: true });
       }

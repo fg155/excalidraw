@@ -14,6 +14,7 @@ import {
   isImageElement,
   isLineElement,
   isPointInElement,
+  isTextElement,
 } from "@excalidraw/element";
 import {
   lineSegment,
@@ -26,8 +27,6 @@ import {
 import { getElementsInGroup } from "@excalidraw/element";
 
 import { shouldTestInside } from "@excalidraw/element";
-import { hasBoundTextElement, isBoundToContainer } from "@excalidraw/element";
-import { getBoundTextElementId } from "@excalidraw/element";
 
 import type { Bounds } from "@excalidraw/common";
 
@@ -37,6 +36,9 @@ import type { ElementsMap, ExcalidrawElement } from "@excalidraw/element/types";
 import { AnimatedTrail } from "../animatedTrail";
 
 import type App from "../components/App";
+
+export const isEraserProtectedElement = (element: ExcalidrawElement | null) =>
+  isImageElement(element) || isTextElement(element);
 
 export class EraserTrail extends AnimatedTrail {
   private elementsToErase: Set<ExcalidrawElement["id"]> = new Set();
@@ -100,7 +102,7 @@ export class EraserTrail extends AnimatedTrail {
     );
 
     const candidateElements = this.app.visibleElements.filter(
-      (el) => !el.locked && !isImageElement(el),
+      (el) => !el.locked && !isEraserProtectedElement(el),
     );
 
     const candidateElementsMap = arrayToMap(candidateElements);
@@ -129,18 +131,6 @@ export class EraserTrail extends AnimatedTrail {
             this.groupsToErase.delete(shallowestGroupId);
           }
 
-          if (isBoundToContainer(element)) {
-            this.elementsToErase.delete(element.containerId);
-          }
-
-          if (hasBoundTextElement(element)) {
-            const boundText = getBoundTextElementId(element);
-
-            if (boundText) {
-              this.elementsToErase.delete(boundText);
-            }
-          }
-
           this.elementsToErase.delete(element.id);
         }
       } else if (!restoreToErase && !this.elementsToErase.has(element.id)) {
@@ -161,23 +151,11 @@ export class EraserTrail extends AnimatedTrail {
             );
 
             for (const elementInGroup of elementsInGroup) {
-              if (!isImageElement(elementInGroup)) {
+              if (!isEraserProtectedElement(elementInGroup)) {
                 this.elementsToErase.add(elementInGroup.id);
               }
             }
             this.groupsToErase.add(shallowestGroupId);
-          }
-
-          if (hasBoundTextElement(element)) {
-            const boundText = getBoundTextElementId(element);
-
-            if (boundText) {
-              this.elementsToErase.add(boundText);
-            }
-          }
-
-          if (isBoundToContainer(element)) {
-            this.elementsToErase.add(element.containerId);
           }
 
           this.elementsToErase.add(element.id);

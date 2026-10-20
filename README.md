@@ -135,7 +135,7 @@ packages/element/            Geometry, text/math layout, rendering
 
 ## Project status
 
-Windows previews have been built and run. The Mac ARM64 workflow is configured; on-device validation is pending.
+Windows previews have been built and run. Apple Silicon macOS has also been tested on hardware, with no issues reported so far.
 
 Regression tests cover saving, undo/redo, simulated pen input, text/image eraser protection, paper backgrounds, and math rendering. Cross-process file locking is not yet implemented; open each board in one app instance at a time.
 

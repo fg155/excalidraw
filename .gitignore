@@ -27,3 +27,8 @@ dev-dist
 html
 meta*.json
 .claude
+
+# Local development notes and history backups
+/IMPLEMENTATION_STATUS.md
+*.private.md
+*.bundle

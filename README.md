@@ -1,65 +1,83 @@
-# Excalidraw Personal
+<p align="center">
+  <img src="./public/favicon.svg" width="72" height="72" alt="Excalidraw Personal icon" />
+</p>
 
-An offline-first desktop whiteboard for handwriting, diagrams, and math notes. Built on [Excalidraw](https://github.com/excalidraw/excalidraw), with local board management and native file storage.
+<h1 align="center">Excalidraw Personal</h1>
 
-**English** · [简体中文](./README.zh-CN.md)
+<p align="center">A desktop whiteboard for handwriting, diagrams, and math notes.</p>
 
-[Features](#features) · [Download](#download) · [Development](#development) · [License](#credits-and-license)
+<p align="center">
+  <strong>English</strong> · <a href="./README.zh-CN.md">简体中文</a>
+</p>
 
-> Development preview. Windows x64 and macOS Apple Silicon build workflows are included. Back up important boards and review the [project status](#project-status) before using a preview.
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#download">Download</a> ·
+  <a href="#development">Development</a> ·
+  <a href="#credits-and-license">License</a>
+</p>
+
+Built on [Excalidraw](https://github.com/excalidraw/excalidraw), with offline editing, a board gallery, and native file storage.
+
+> Development preview for Windows x64 and macOS Apple Silicon. Back up important boards before trying it. See [project status](#project-status) for testing details.
 
 ## Features
 
 ### Board management
 
-- Browse boards in a thumbnail gallery; create, open, import, rename, and delete local `.excalidraw` files.
-- Draw without a persistent board sidebar. Return to the gallery from the top-left button.
-- Autosave locally, or save explicitly with `Ctrl+S` / `Cmd+S`.
-- Recover deleted boards from device-local trash: up to 10 boards, retained for 10 days. Historical save backups are managed separately.
-- Keep settings across manual app updates, with settings import and export.
+Your boards live in local `.excalidraw` files. Browse their thumbnails in the gallery, where you can create, open, import, rename, and delete them. The gallery stays out of the way while you draw; the top-left button takes you back.
+
+Changes save automatically. You can also save with `Ctrl+S` / `Cmd+S`. Deleted boards go to device-local trash, which holds up to 10 boards for 10 days. Historical save backups are separate. Settings survive manual app updates and can be exported or imported.
 
 ### Handwriting and drawing
 
-- Preserve pressure-sensitive freehand drawing when the pen and driver report pressure.
-- Hold Shift **before starting a stroke** to draw a straight line at any angle, or pause at the end of a near-straight stroke to straighten it.
-- Adjust stroke width with presets or a **0.5–32** slider. Converted straight lines use a uniform width derived from the drawn stroke.
-- Erase ink without removing images, plain text, or LaTeX text—even when grouped or inside an erased frame. Select protected content and press Delete to remove it explicitly.
-- Choose from 10 paper colors and 9 background styles: plain, dots, square, dense grid, major/minor grid, diamond, wide ruled, triangle, and narrow ruled. Backgrounds are saved per board and are independent of snapping.
+- Freehand strokes retain pressure when the pen and driver report it.
+- Hold Shift **before starting a stroke** for a straight line at any angle. You can also pause at the end of a near-straight stroke to straighten it.
+- Stroke width has presets and a slider from 0.5 to 32. Straightened strokes use a uniform width calculated from the original stroke.
+- The eraser leaves images and text intact, including LaTeX text, grouped content, and content in an erased frame. To remove them, select them and press Delete.
+
+Each board has its own paper color and pattern, independent of snapping. Choose from 10 colors and 9 styles: plain, dots, square, dense grid, major/minor grid, diamond, wide ruled, triangle, and narrow ruled.
 
 ### Text and equations
 
-- Switch each text block between **Plain text** and **LaTeX**, without a global mode switch.
-- New text and pasted plain text inherit the last-used text mode, remembered across restarts. Copied drawing elements retain their own mode.
-- Mix prose with `$...$`, `$$...$$`, `\(...\)`, and `\[...\]` formulas. The original source remains editable.
-- Render math offline with bundled MathJax; no system TeX installation or remote rendering service is required.
-- Export PNG and SVG through Excalidraw's export tools, including rendered formulas and optional paper backgrounds.
+Each text block has its own Plain text or LaTeX setting; there is no global switch. New text and pasted plain text use the last-selected mode, even after a restart. Copied drawing elements keep their own mode.
 
-LaTeX mode supports a focused base/AMS math subset, not Markdown or full TeX documents. Unsupported formulas remain visible as source rather than disappearing.
+Mix prose with `$...$`, `$$...$$`, `\(...\)`, or `\[...\]` formulas and edit the source whenever you need to. Bundled MathJax renders the equations offline, so no system TeX installation or remote service is needed. PNG and SVG exports include rendered formulas and, optionally, paper backgrounds.
+
+LaTeX mode covers base/AMS math. It does not parse Markdown or full TeX documents. Unsupported formulas stay visible as source.
 
 ## Download
 
-Preview packages are generated by [GitHub Actions](https://github.com/fg155/excalidraw/actions), not published as stable releases.
+Download preview packages from [GitHub Actions](https://github.com/fg155/excalidraw/actions). There are no stable releases yet.
 
-| Platform | Workflow | Artifact | Contents |
-| --- | --- | --- | --- |
-| Windows x64 | [Desktop Windows preview](https://github.com/fg155/excalidraw/actions/workflows/desktop-windows.yml) | `Excalidraw-Personal-Windows-x64-<run>` | Portable app folder in a ZIP |
-| macOS Apple Silicon | [Desktop macOS preview](https://github.com/fg155/excalidraw/actions/workflows/desktop-macos.yml) | `Excalidraw-Personal-macOS-arm64-<run>` | ZIP containing a DMG |
+| Platform | Build workflow | Package |
+| --- | --- | --- |
+| Windows x64 | [Desktop Windows preview](https://github.com/fg155/excalidraw/actions/workflows/desktop-windows.yml) | Portable folder in a ZIP |
+| macOS Apple Silicon | [Desktop macOS preview](https://github.com/fg155/excalidraw/actions/workflows/desktop-macos.yml) | DMG inside a ZIP |
 
-While signed in to GitHub, open a **successful run**, select **Summary**, and download the matching package from **Artifacts**. The current workflows retain artifacts for 14 days. A successful Windows run does not produce a Mac package.
+<details>
+<summary>Artifact names</summary>
 
-- **Windows:** extract the entire ZIP, then run `excalidraw-personal.exe`. WebView2 Runtime is required.
-- **Mac:** extract the ZIP on your Mac, open the DMG, and drag **Excalidraw Personal.app** into Applications. This is an ARM64 build, not an Intel or Universal build.
+- Windows: `Excalidraw-Personal-Windows-x64-<run>`
+- macOS: `Excalidraw-Personal-macOS-arm64-<run>`
+
+</details>
+
+Sign in to GitHub, open a successful run, then choose Summary and download the package under Artifacts. Packages expire after 14 days. Windows and Mac have separate runs, so check the platform before downloading.
+
+- Windows: extract the entire ZIP, then run `excalidraw-personal.exe`. WebView2 Runtime is required.
+- Mac: extract the ZIP on your Mac, open the DMG, and drag Excalidraw Personal.app into Applications. The Mac package targets ARM64. Intel and Universal builds are not provided.
 - Preview packages are not production-signed releases. Mac builds use ad-hoc signing without Apple notarization. Verify the download source; do not disable operating-system security protections.
 
 Start with a separate test folder. Updates are manual: close the old version, back up your boards, and replace the application without deleting its application-data directory.
 
 ## Files and settings
 
-Boards use `.excalidraw` JSON with embedded referenced images. Custom paper and text-mode fields are extensions; other Excalidraw versions may not reproduce those features.
+Boards are `.excalidraw` JSON files with their referenced images embedded. Paper styles and text modes use custom fields, so other Excalidraw versions may not display them the same way.
 
-Choose a local folder or one synchronized by a service such as OneDrive. **“Saved” means saved to this device, not uploaded to the cloud.** The desktop app does not provide its own sync service or real-time collaboration. Avoid editing the same board on multiple devices at once.
+You can use a local folder or one synced by OneDrive or a similar service. The saved indicator confirms the local write only; it does not track cloud uploads. The app has no built-in sync service or real-time collaboration. Avoid editing the same board on multiple devices at once.
 
-Saves check for externally changed content and create a conflict copy when a conflict is detected. Atomic file replacement and local recovery snapshots help protect data, but do not guarantee conflict-free offline editing or replace independent backups.
+When saving detects a file changed outside the app, it creates a conflict copy. Writes use atomic replacement and keep local recovery snapshots. Offline edits on different devices can still conflict, so keep independent backups.
 
 - Deleted drawing elements remain in memory for in-session undo but are omitted from desktop board saves. Switching boards or closing the app does not preserve that undo history.
 - Settings, trash, and recovery snapshots are device-local, separate from the program folder. Move boards separately and export/import settings when moving between Windows and Mac; select the board folder again on the new device.
@@ -67,9 +85,9 @@ Saves check for externally changed content and create a conflict copy when a con
 
 ## Development
 
-Built with **Tauri 2 / Rust**, **React / TypeScript / Vite**, the Excalidraw editor, and **MathJax**.
+The desktop shell uses Tauri 2 and Rust. The interface uses React, TypeScript, and Vite, with Excalidraw for editing and MathJax for equations.
 
-Use Node.js 24 and Yarn 1.22.22 to match CI. Native development additionally requires the Tauri platform prerequisites: Rust, native build tools, and WebView dependencies. Installing JavaScript dependencies alone does not provide a native build environment.
+Use Node.js 24 and Yarn 1.22.22 to match CI. For native development, you also need Tauri's platform prerequisites: Rust, native build tools, and WebView dependencies. These are separate from the JavaScript dependencies.
 
 ```bash
 git clone --branch feature/desktop-straight-ink https://github.com/fg155/excalidraw.git
@@ -87,7 +105,8 @@ yarn desktop:tauri dev
 
 `desktop:build` produces frontend assets, not an EXE or app bundle. Native packaging commands and checks are maintained in the [Windows workflow](./.github/workflows/desktop-windows.yml) and [Mac workflow](./.github/workflows/desktop-macos.yml). Both currently run on pushes to `feature/desktop-straight-ink`; forks need Actions enabled.
 
-### Checks
+<details>
+<summary>Type checks and tests</summary>
 
 ```bash
 yarn tsc --noEmit --pretty false
@@ -99,7 +118,10 @@ node --test desktop/scripts/macos-workflow.test.cjs
 
 The workflows contain the full desktop-focused test list. The commands above include focused eraser/math tests and native storage tests, not a complete native end-to-end test.
 
-### Source layout
+</details>
+
+<details>
+<summary>Source layout</summary>
 
 ```text
 desktop/src/                 Desktop UI, board gallery, settings, save queue
@@ -109,13 +131,15 @@ packages/element/            Geometry, text/math layout, rendering
 .github/workflows/desktop-*  Windows and macOS preview builds
 ```
 
+</details>
+
 ## Project status
 
-This is a desktop-focused fork, not an official Excalidraw desktop release. Windows previews have been built and run. The Mac ARM64 workflow is included, but successful packaging and device behavior must be verified for the revision being installed; it is not presented here as a validated stable Mac release.
+This is an unofficial desktop fork of Excalidraw. Windows previews have been built and run. The Mac ARM64 workflow is in place; packaging and on-device testing still need confirmation for the version you install. Mac builds remain previews.
 
 Regression tests cover saving, undo/redo, pen gestures, text/image eraser protection, paper backgrounds, and math rendering. Simulated pointer tests do not certify every tablet or driver. Native WebView behavior, cross-device synchronization, and physical pen input still require device testing. Cross-process file locking is not yet implemented; avoid opening the same board in multiple app instances.
 
-For bug reports, include your platform, build commit or run number, reproduction steps, and—when relevant—the tablet model and driver version. Use a minimal sample board without private content.
+When reporting a bug, include your platform, build commit or run number, and steps to reproduce it. For pen input issues, add the tablet model and driver version. Remove private content from sample boards.
 
 ## Credits and license
 

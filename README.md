@@ -1,124 +1,124 @@
-<a href="https://excalidraw.com/" target="_blank" rel="noopener">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" alt="Excalidraw" srcset="https://excalidraw.nyc3.cdn.digitaloceanspaces.com/github/excalidraw_github_cover_2_dark.png" />
-    <img alt="Excalidraw" src="https://excalidraw.nyc3.cdn.digitaloceanspaces.com/github/excalidraw_github_cover_2.png" />
-  </picture>
-</a>
+# Excalidraw Personal
 
-<h4 align="center">
-  <a href="https://excalidraw.com">Excalidraw Editor</a> |
-  <a href="https://plus.excalidraw.com/blog">Blog</a> |
-  <a href="https://docs.excalidraw.com">Documentation</a> |
-  <a href="https://plus.excalidraw.com">Excalidraw+</a>
-</h4>
+An offline-first desktop whiteboard for handwriting, diagrams, and math notes. Built on [Excalidraw](https://github.com/excalidraw/excalidraw), with local board management and native file storage.
 
-<div align="center">
-  <h2>
-    An open source virtual hand-drawn style whiteboard. </br>
-    Collaborative and end-to-end encrypted. </br>
-  <br />
-  </h2>
-</div>
+**English** · [简体中文](./README.zh-CN.md)
 
-<br />
-<p align="center">
-  <a href="https://github.com/excalidraw/excalidraw/blob/master/LICENSE">
-    <img alt="Excalidraw is released under the MIT license." src="https://img.shields.io/badge/license-MIT-blue.svg"  /></a>
-  <a href="https://www.npmjs.com/package/@excalidraw/excalidraw">
-    <img alt="npm downloads/month" src="https://img.shields.io/npm/dm/@excalidraw/excalidraw"  /></a>
-  <a href="https://docs.excalidraw.com/docs/introduction/contributing">
-    <img alt="PRs welcome!" src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat"  /></a>
-  <a href="https://discord.gg/UexuTaE">
-    <img alt="Chat on Discord" src="https://img.shields.io/discord/723672430744174682?color=738ad6&label=Chat%20on%20Discord&logo=discord&logoColor=ffffff&widget=false"/></a>
-  <a href="https://deepwiki.com/excalidraw/excalidraw">
-    <img alt="Ask DeepWiki" src="https://deepwiki.com/badge.svg" /></a>
-  <a href="https://twitter.com/excalidraw">
-    <img alt="Follow Excalidraw on Twitter" src="https://img.shields.io/twitter/follow/excalidraw.svg?label=follow+@excalidraw&style=social&logo=twitter"/></a>
-</p>
+[Features](#features) · [Download](#download) · [Development](#development) · [License](#credits-and-license)
 
-<div align="center">
-  <figure>
-    <a href="https://excalidraw.com" target="_blank" rel="noopener">
-      <img src="https://excalidraw.nyc3.cdn.digitaloceanspaces.com/github%2Fproduct_showcase.png" alt="Product showcase" />
-    </a>
-    <figcaption>
-      <p align="center">
-        Create beautiful hand-drawn like diagrams, wireframes, or whatever you like.
-      </p>
-    </figcaption>
-  </figure>
-</div>
+> Development preview. Windows x64 and macOS Apple Silicon build workflows are included. Back up important boards and review the [project status](#project-status) before using a preview.
 
 ## Features
 
-The Excalidraw editor (npm package) supports:
+### Board management
 
-- 💯&nbsp;Free & open-source.
-- 🎨&nbsp;Infinite, canvas-based whiteboard.
-- ✍️&nbsp;Hand-drawn like style.
-- 🌓&nbsp;Dark mode.
-- 🏗️&nbsp;Customizable.
-- 📷&nbsp;Image support.
-- 😀&nbsp;Shape libraries support.
-- 🌐&nbsp;Localization (i18n) support.
-- 🖼️&nbsp;Export to PNG, SVG & clipboard.
-- 💾&nbsp;Open format - export drawings as an `.excalidraw` json file.
-- ⚒️&nbsp;Wide range of tools - rectangle, circle, diamond, arrow, line, free-draw, eraser...
-- ➡️&nbsp;Arrow-binding & labeled arrows.
-- 🔙&nbsp;Undo / Redo.
-- 🔍&nbsp;Zoom and panning support.
+- Browse boards in a thumbnail gallery; create, open, import, rename, and delete local `.excalidraw` files.
+- Draw without a persistent board sidebar. Return to the gallery from the top-left button.
+- Autosave locally, or save explicitly with `Ctrl+S` / `Cmd+S`.
+- Recover deleted boards from device-local trash: up to 10 boards, retained for 10 days. Historical save backups are managed separately.
+- Keep settings across manual app updates, with settings import and export.
 
-## Excalidraw.com
+### Handwriting and drawing
 
-The app hosted at [excalidraw.com](https://excalidraw.com) is a minimal showcase of what you can build with Excalidraw. Its [source code](https://github.com/excalidraw/excalidraw/tree/master/excalidraw-app) is part of this repository as well, and the app features:
+- Preserve pressure-sensitive freehand drawing when the pen and driver report pressure.
+- Hold Shift **before starting a stroke** to draw a straight line at any angle, or pause at the end of a near-straight stroke to straighten it.
+- Adjust stroke width with presets or a **0.5–32** slider. Converted straight lines use a uniform width derived from the drawn stroke.
+- Erase ink without removing images, plain text, or LaTeX text—even when grouped or inside an erased frame. Select protected content and press Delete to remove it explicitly.
+- Choose from 10 paper colors and 9 background styles: plain, dots, square, dense grid, major/minor grid, diamond, wide ruled, triangle, and narrow ruled. Backgrounds are saved per board and are independent of snapping.
 
-- 📡&nbsp;PWA support (works offline).
-- 🤼&nbsp;Real-time collaboration.
-- 🔒&nbsp;End-to-end encryption.
-- 💾&nbsp;Local-first support (autosaves to the browser).
-- 🔗&nbsp;Shareable links (export to a readonly link you can share with others).
+### Text and equations
 
-We'll be adding these features as drop-in plugins for the npm package in the future.
+- Switch each text block between **Plain text** and **LaTeX**, without a global mode switch.
+- New text and pasted plain text inherit the last-used text mode, remembered across restarts. Copied drawing elements retain their own mode.
+- Mix prose with `$...$`, `$$...$$`, `\(...\)`, and `\[...\]` formulas. The original source remains editable.
+- Render math offline with bundled MathJax; no system TeX installation or remote rendering service is required.
+- Export PNG and SVG through Excalidraw's export tools, including rendered formulas and optional paper backgrounds.
 
-## Quick start
+LaTeX mode supports a focused base/AMS math subset, not Markdown or full TeX documents. Unsupported formulas remain visible as source rather than disappearing.
 
-**Note:** following instructions are for installing the Excalidraw [npm package](https://www.npmjs.com/package/@excalidraw/excalidraw) when integrating Excalidraw into your own app. To run the repository locally for development, please refer to our [Development Guide](https://docs.excalidraw.com/docs/introduction/development).
+## Download
 
-Use `npm` or `yarn` to install the package.
+Preview packages are generated by [GitHub Actions](https://github.com/fg155/excalidraw/actions), not published as stable releases.
+
+| Platform | Workflow | Artifact | Contents |
+| --- | --- | --- | --- |
+| Windows x64 | [Desktop Windows preview](https://github.com/fg155/excalidraw/actions/workflows/desktop-windows.yml) | `Excalidraw-Personal-Windows-x64-<run>` | Portable app folder in a ZIP |
+| macOS Apple Silicon | [Desktop macOS preview](https://github.com/fg155/excalidraw/actions/workflows/desktop-macos.yml) | `Excalidraw-Personal-macOS-arm64-<run>` | ZIP containing a DMG |
+
+While signed in to GitHub, open a **successful run**, select **Summary**, and download the matching package from **Artifacts**. The current workflows retain artifacts for 14 days. A successful Windows run does not produce a Mac package.
+
+- **Windows:** extract the entire ZIP, then run `excalidraw-personal.exe`. WebView2 Runtime is required.
+- **Mac:** extract the ZIP on your Mac, open the DMG, and drag **Excalidraw Personal.app** into Applications. This is an ARM64 build, not an Intel or Universal build.
+- Preview packages are not production-signed releases. Mac builds use ad-hoc signing without Apple notarization. Verify the download source; do not disable operating-system security protections.
+
+Start with a separate test folder. Updates are manual: close the old version, back up your boards, and replace the application without deleting its application-data directory.
+
+## Files and settings
+
+Boards use `.excalidraw` JSON with embedded referenced images. Custom paper and text-mode fields are extensions; other Excalidraw versions may not reproduce those features.
+
+Choose a local folder or one synchronized by a service such as OneDrive. **“Saved” means saved to this device, not uploaded to the cloud.** The desktop app does not provide its own sync service or real-time collaboration. Avoid editing the same board on multiple devices at once.
+
+Saves check for externally changed content and create a conflict copy when a conflict is detected. Atomic file replacement and local recovery snapshots help protect data, but do not guarantee conflict-free offline editing or replace independent backups.
+
+- Deleted drawing elements remain in memory for in-session undo but are omitted from desktop board saves. Switching boards or closing the app does not preserve that undo history.
+- Settings, trash, and recovery snapshots are device-local, separate from the program folder. Move boards separately and export/import settings when moving between Windows and Mac; select the board folder again on the new device.
+- Expired trash is cleaned while the app is running or on the next launch, not by a background service while the app is closed.
+
+## Development
+
+Built with **Tauri 2 / Rust**, **React / TypeScript / Vite**, the Excalidraw editor, and **MathJax**.
+
+Use Node.js 24 and Yarn 1.22.22 to match CI. Native development additionally requires the Tauri platform prerequisites: Rust, native build tools, and WebView dependencies. Installing JavaScript dependencies alone does not provide a native build environment.
 
 ```bash
-npm install react react-dom @excalidraw/excalidraw
-# or
-yarn add react react-dom @excalidraw/excalidraw
+git clone --branch feature/desktop-straight-ink https://github.com/fg155/excalidraw.git
+cd excalidraw
+yarn install --frozen-lockfile
+
+# Frontend only; native file operations require the Tauri application.
+yarn desktop:dev
+yarn desktop:build
+
+# Native development, after installing platform prerequisites.
+yarn --cwd desktop icons
+yarn desktop:tauri dev
 ```
 
-Check out our [documentation](https://docs.excalidraw.com/docs/@excalidraw/excalidraw/installation) for more details!
+`desktop:build` produces frontend assets, not an EXE or app bundle. Native packaging commands and checks are maintained in the [Windows workflow](./.github/workflows/desktop-windows.yml) and [Mac workflow](./.github/workflows/desktop-macos.yml). Both currently run on pushes to `feature/desktop-straight-ink`; forks need Actions enabled.
 
-## Contributing
+### Checks
 
-- Missing something or found a bug? [Report here](https://github.com/excalidraw/excalidraw/issues).
-- Want to contribute? Check out our [contribution guide](https://docs.excalidraw.com/docs/introduction/contributing) or let us know on [Discord](https://discord.gg/UexuTaE).
-- Want to help with translations? See the [translation guide](https://docs.excalidraw.com/docs/introduction/contributing#translating).
+```bash
+yarn tsc --noEmit --pretty false
+yarn --cwd desktop typecheck
+yarn vitest run packages/excalidraw/tests/imageEraser.test.tsx packages/excalidraw/tests/latex.test.tsx
+cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --no-default-features
+node --test desktop/scripts/macos-workflow.test.cjs
+```
 
-## Integrations
+The workflows contain the full desktop-focused test list. The commands above include focused eraser/math tests and native storage tests, not a complete native end-to-end test.
 
-- [VScode extension](https://marketplace.visualstudio.com/items?itemName=pomdtr.excalidraw-editor)
-- [npm package](https://www.npmjs.com/package/@excalidraw/excalidraw)
+### Source layout
 
-## Who's integrating Excalidraw
+```text
+desktop/src/                 Desktop UI, board gallery, settings, save queue
+desktop/src-tauri/           Native application and local file storage
+packages/excalidraw/         Editor UI, drawing interactions, integration tests
+packages/element/            Geometry, text/math layout, rendering
+.github/workflows/desktop-*  Windows and macOS preview builds
+```
 
-[Google Cloud](https://googlecloudcheatsheet.withgoogle.com/architecture) • [Meta](https://meta.com/) • [CodeSandbox](https://codesandbox.io/) • [Obsidian Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin) • [Replit](https://replit.com/) • [Slite](https://slite.com/) • [Notion](https://notion.so/) • [HackerRank](https://www.hackerrank.com/) • and many others
+## Project status
 
-## Sponsors & support
+This is a desktop-focused fork, not an official Excalidraw desktop release. Windows previews have been built and run. The Mac ARM64 workflow is included, but successful packaging and device behavior must be verified for the revision being installed; it is not presented here as a validated stable Mac release.
 
-If you like the project, you can become a sponsor at [Open Collective](https://opencollective.com/excalidraw) or use [Excalidraw+](https://plus.excalidraw.com/).
+Regression tests cover saving, undo/redo, pen gestures, text/image eraser protection, paper backgrounds, and math rendering. Simulated pointer tests do not certify every tablet or driver. Native WebView behavior, cross-device synchronization, and physical pen input still require device testing. Cross-process file locking is not yet implemented; avoid opening the same board in multiple app instances.
 
-## Thank you for supporting Excalidraw
+For bug reports, include your platform, build commit or run number, reproduction steps, and—when relevant—the tablet model and driver version. Use a minimal sample board without private content.
 
-[<img src="https://opencollective.com/excalidraw/tiers/sponsors/0/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/0/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/1/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/1/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/2/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/2/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/3/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/3/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/4/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/4/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/5/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/5/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/6/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/6/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/7/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/7/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/8/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/8/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/9/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/9/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/10/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/10/website)
+## Credits and license
 
-<a href="https://opencollective.com/excalidraw#category-CONTRIBUTE" target="_blank"><img src="https://opencollective.com/excalidraw/tiers/backers.svg?avatarHeight=32"/></a>
+The editor, drawing tools, and core file format come from [Excalidraw](https://github.com/excalidraw/excalidraw). This fork adds the desktop workflow and customizations described above; it is not affiliated with or endorsed by the upstream project.
 
-Last but not least, we're thankful to these companies for offering their services for free:
-
-[![Vercel](./.github/assets/vercel.svg)](https://vercel.com) [![Sentry](./.github/assets/sentry.svg)](https://sentry.io) [![Crowdin](./.github/assets/crowdin.svg)](https://crowdin.com)
+Licensed under the [MIT License](./LICENSE), retaining Excalidraw's copyright notice. Math rendering uses MathJax; see [math dependency notices](./desktop/MATH-NOTICES.txt). Preview packages include the relevant math and font license notices.

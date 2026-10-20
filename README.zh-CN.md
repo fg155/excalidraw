@@ -19,7 +19,7 @@
 
 基于 [Excalidraw](https://github.com/excalidraw/excalidraw)，支持离线编辑、画板缩略图管理和原生文件存储。
 
-> Windows x64 / macOS Apple Silicon 开发预览版。试用前请备份重要画板，测试范围见[项目状态](#项目状态)。
+> Windows x64 / macOS Apple Silicon 开发预览版，详见[项目状态](#项目状态)。
 
 ## 功能
 
@@ -48,7 +48,7 @@ LaTeX 模式支持 base/AMS 数学语法，不支持 Markdown 或完整 TeX 文�
 
 ## 下载
 
-预览包可从 [GitHub Actions](https://github.com/fg155/excalidraw/actions) 下载，目前还没有稳定版 Release。
+预览包可从 [GitHub Actions](https://github.com/fg155/excalidraw/actions) 下载。
 
 | 平台 | 构建工作流 | 安装包 |
 | --- | --- | --- |
@@ -67,9 +67,9 @@ LaTeX 模式支持 base/AMS 数学语法，不支持 Markdown 或完整 TeX 文�
 
 - Windows：完整解压 ZIP，运行 `excalidraw-personal.exe`。系统需要 WebView2 Runtime。
 - Mac：在 Mac 上解压 ZIP，打开 DMG，将 Excalidraw Personal.app 拖入“应用程序”。Mac 包面向 ARM64。目前不提供 Intel 或 Universal 版本。
-- 预览包不是具有正式发布签名的版本。Mac 使用 ad-hoc 临时签名，未经 Apple 公证。请核对下载来源，不要关闭操作系统安全防护。
+- Mac 使用 ad-hoc 临时签名，未经 Apple 公证，首次打开时系统可能要求确认。
 
-初次使用请先选择单独的测试文件夹。更新需手动进行：关闭旧版本、备份画板后替换应用，不要删除应用数据目录。
+更新时关闭应用并替换程序文件，保留应用数据目录即可保留设置。
 
 ## 文件与设置
 
@@ -77,7 +77,7 @@ LaTeX 模式支持 base/AMS 数学语法，不支持 Markdown 或完整 TeX 文�
 
 可以选择本地文件夹，也可以选择 OneDrive 等服务同步的文件夹。保存状态只确认本机写入，不追踪云端上传进度。应用没有内置同步服务或实时协作功能，请避免多台设备同时编辑同一画板。
 
-保存时如果检测到文件被其他程序修改，会生成冲突副本。写入采用原子替换，并保留本机恢复快照。多台设备离线编辑仍可能产生冲突，请另行备份重要文件。
+保存时如果检测到文件被其他程序修改，会生成冲突副本。写入采用原子替换，并保留本机恢复快照。重要画板请另行备份。
 
 - 已删除的绘图元素在当前会话中留在内存供撤销使用，但不会写入桌面画板存档。切换画板或关闭应用后不保留这段撤销历史。
 - 设置、回收站和恢复快照保存在本机，与程序目录分开。跨 Windows / Mac 迁移时需另行移动画板、导出／导入设置，并在新设备重新选择画板文件夹。
@@ -87,7 +87,7 @@ LaTeX 模式支持 base/AMS 数学语法，不支持 Markdown 或完整 TeX 文�
 
 桌面端使用 Tauri 2 和 Rust，界面使用 React、TypeScript 和 Vite。编辑器基于 Excalidraw，公式由 MathJax 渲染。
 
-使用 Node.js 24 和 Yarn 1.22.22，与 CI 保持一致。原生开发还需要单独准备 Tauri 对应平台的 Rust、本机编译工具和 WebView 依赖，安装 JavaScript 依赖时不会一并安装这些工具。
+使用 Node.js 24 和 Yarn 1.22.22，与 CI 保持一致。原生开发还需要 Rust、对应平台的编译工具和 WebView 依赖。
 
 ```bash
 git clone --branch feature/desktop-straight-ink https://github.com/fg155/excalidraw.git
@@ -116,7 +116,7 @@ cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --no-default-fe
 node --test desktop/scripts/macos-workflow.test.cjs
 ```
 
-完整的桌面相关测试列表见工作流。以上命令包含橡皮／公式专项测试和原生存储测试，不等同于完整的原生端到端测试。
+完整的桌面相关测试列表见工作流。以上命令运行橡皮／公式专项测试和原生存储测试。
 
 </details>
 
@@ -135,14 +135,14 @@ packages/element/            元素几何、文字／公式排版、渲染
 
 ## 项目状态
 
-这是 Excalidraw 的非官方桌面分支。Windows 预览版已有构建和运行记录。Mac ARM64 工作流已配置，所安装版本的打包和实机测试结果仍需确认，目前按预览版提供。
+Windows 预览版已有构建和运行记录。Mac ARM64 工作流已配置，实机验证待完成。
 
-回归测试覆盖保存、撤销／重做、数位笔手势、文字／图片擦除保护、纸张背景和公式渲染。模拟指针测试不代表所有数位板及驱动均已通过认证。原生 WebView 行为、跨设备文件同步与实体数位笔输入仍需实机测试。尚未实现跨进程文件锁，请避免多个应用实例同时打开同一画板。
+回归测试覆盖保存、撤销／重做、模拟数位笔输入、文字／图片擦除保护、纸张背景和公式渲染。尚未实现跨进程文件锁，同一画板请只在一个应用实例中打开。
 
 反馈问题时，请提供平台、构建提交或运行编号、复现步骤；涉及数位板时补充设备型号和驱动版本。示例画板请尽量精简，不包含私人内容。
 
 ## 致谢与许可证
 
-编辑器、绘图工具和核心文件格式来自 [Excalidraw](https://github.com/excalidraw/excalidraw)。本分支增加了桌面工作流与上述定制功能，与上游项目没有隶属关系，也不代表上游官方背书。
+编辑器、绘图工具和核心文件格式来自 [Excalidraw](https://github.com/excalidraw/excalidraw)。本分支增加了本地画板管理和上述桌面功能。
 
-项目采用 [MIT 许可证](./LICENSE)，保留 Excalidraw 的版权声明。数学渲染使用 MathJax，详见[数学依赖声明](./desktop/MATH-NOTICES.txt)。预览包包含相应的数学和字体许可说明。
+项目采用 [MIT 许可证](./LICENSE)。数学渲染使用 MathJax，详见[数学依赖声明](./desktop/MATH-NOTICES.txt)。

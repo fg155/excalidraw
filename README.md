@@ -19,7 +19,7 @@
 
 Built on [Excalidraw](https://github.com/excalidraw/excalidraw), with offline editing, a board gallery, and native file storage.
 
-> Development preview for Windows x64 and macOS Apple Silicon. Back up important boards before trying it. See [project status](#project-status) for testing details.
+> Development preview for Windows x64 and macOS Apple Silicon. See [project status](#project-status).
 
 ## Features
 
@@ -48,7 +48,7 @@ LaTeX mode covers base/AMS math. It does not parse Markdown or full TeX document
 
 ## Download
 
-Download preview packages from [GitHub Actions](https://github.com/fg155/excalidraw/actions). There are no stable releases yet.
+Download preview packages from [GitHub Actions](https://github.com/fg155/excalidraw/actions).
 
 | Platform | Build workflow | Package |
 | --- | --- | --- |
@@ -67,9 +67,9 @@ Sign in to GitHub, open a successful run, then choose Summary and download the p
 
 - Windows: extract the entire ZIP, then run `excalidraw-personal.exe`. WebView2 Runtime is required.
 - Mac: extract the ZIP on your Mac, open the DMG, and drag Excalidraw Personal.app into Applications. The Mac package targets ARM64. Intel and Universal builds are not provided.
-- Preview packages are not production-signed releases. Mac builds use ad-hoc signing without Apple notarization. Verify the download source; do not disable operating-system security protections.
+- Mac builds use ad-hoc signing without Apple notarization, so macOS may ask for approval when opening the app.
 
-Start with a separate test folder. Updates are manual: close the old version, back up your boards, and replace the application without deleting its application-data directory.
+To update, close the app and replace the application files. Keep the application-data directory to retain your settings.
 
 ## Files and settings
 
@@ -77,7 +77,7 @@ Boards are `.excalidraw` JSON files with their referenced images embedded. Paper
 
 You can use a local folder or one synced by OneDrive or a similar service. The saved indicator confirms the local write only; it does not track cloud uploads. The app has no built-in sync service or real-time collaboration. Avoid editing the same board on multiple devices at once.
 
-When saving detects a file changed outside the app, it creates a conflict copy. Writes use atomic replacement and keep local recovery snapshots. Offline edits on different devices can still conflict, so keep independent backups.
+When saving detects a file changed outside the app, it creates a conflict copy. Writes use atomic replacement and keep local recovery snapshots. Keep an independent backup of important boards.
 
 - Deleted drawing elements remain in memory for in-session undo but are omitted from desktop board saves. Switching boards or closing the app does not preserve that undo history.
 - Settings, trash, and recovery snapshots are device-local, separate from the program folder. Move boards separately and export/import settings when moving between Windows and Mac; select the board folder again on the new device.
@@ -87,7 +87,7 @@ When saving detects a file changed outside the app, it creates a conflict copy. 
 
 The desktop shell uses Tauri 2 and Rust. The interface uses React, TypeScript, and Vite, with Excalidraw for editing and MathJax for equations.
 
-Use Node.js 24 and Yarn 1.22.22 to match CI. For native development, you also need Tauri's platform prerequisites: Rust, native build tools, and WebView dependencies. These are separate from the JavaScript dependencies.
+Use Node.js 24 and Yarn 1.22.22 to match CI. Native development also requires Rust, the platform's build tools, and WebView dependencies.
 
 ```bash
 git clone --branch feature/desktop-straight-ink https://github.com/fg155/excalidraw.git
@@ -116,7 +116,7 @@ cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --no-default-fe
 node --test desktop/scripts/macos-workflow.test.cjs
 ```
 
-The workflows contain the full desktop-focused test list. The commands above include focused eraser/math tests and native storage tests, not a complete native end-to-end test.
+The workflows contain the full desktop-focused test list. The commands above run the eraser/math and native storage tests.
 
 </details>
 
@@ -135,14 +135,14 @@ packages/element/            Geometry, text/math layout, rendering
 
 ## Project status
 
-This is an unofficial desktop fork of Excalidraw. Windows previews have been built and run. The Mac ARM64 workflow is in place; packaging and on-device testing still need confirmation for the version you install. Mac builds remain previews.
+Windows previews have been built and run. The Mac ARM64 workflow is configured; on-device validation is pending.
 
-Regression tests cover saving, undo/redo, pen gestures, text/image eraser protection, paper backgrounds, and math rendering. Simulated pointer tests do not certify every tablet or driver. Native WebView behavior, cross-device synchronization, and physical pen input still require device testing. Cross-process file locking is not yet implemented; avoid opening the same board in multiple app instances.
+Regression tests cover saving, undo/redo, simulated pen input, text/image eraser protection, paper backgrounds, and math rendering. Cross-process file locking is not yet implemented; open each board in one app instance at a time.
 
 When reporting a bug, include your platform, build commit or run number, and steps to reproduce it. For pen input issues, add the tablet model and driver version. Remove private content from sample boards.
 
 ## Credits and license
 
-The editor, drawing tools, and core file format come from [Excalidraw](https://github.com/excalidraw/excalidraw). This fork adds the desktop workflow and customizations described above; it is not affiliated with or endorsed by the upstream project.
+The editor, drawing tools, and core file format come from [Excalidraw](https://github.com/excalidraw/excalidraw). This fork adds local board management and the desktop features described above.
 
-Licensed under the [MIT License](./LICENSE), retaining Excalidraw's copyright notice. Math rendering uses MathJax; see [math dependency notices](./desktop/MATH-NOTICES.txt). Preview packages include the relevant math and font license notices.
+Licensed under the [MIT License](./LICENSE). Math rendering uses MathJax; see [math dependency notices](./desktop/MATH-NOTICES.txt).

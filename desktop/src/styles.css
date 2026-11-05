@@ -43,6 +43,34 @@ body,
   opacity: 0.45;
   cursor: default;
 }
+.tablet-probe-content {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+.tablet-probe-pad {
+  min-height: 100px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--border);
+  background: var(--background);
+  touch-action: none;
+  user-select: none;
+}
+.tablet-probe textarea {
+  box-sizing: border-box;
+  width: 100%;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font: inherit;
+  resize: vertical;
+}
+.tablet-probe-pad:focus-visible,
+.tablet-probe textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
 .desktop-shell button:focus-visible,
 .desktop-dialog input:focus-visible,
 .desktop-dialog select:focus-visible {

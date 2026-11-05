@@ -13,6 +13,7 @@ import { BoardChanges, serializeBoard } from "./boardSnapshot";
 import { defaults, drawingPreferences, parseSettings } from "./settings";
 import { BoardHome, boardLabel as label } from "./BoardHome";
 import { BackgroundPanel } from "./BackgroundPanel";
+import { TabletInputProbe } from "./TabletInputProbe";
 
 import "./styles.css";
 
@@ -735,6 +736,7 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
                 >
                   历史备份
                 </button>
+                <TabletInputProbe />
               </>
             )}
             {panel === "recovery" && (

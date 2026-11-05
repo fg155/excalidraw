@@ -343,7 +343,115 @@ describe("straight ink pen input and rendered previews", () => {
     expect(h.elements).toHaveLength(0);
   });
 
-  it("preserves the original pen eraser and restores the freehand tool", () => {
+  it.each([5, 0, -1])(
+    "recognizes eraser contact with button %s and restores the pen on normal contact",
+    (button) => {
+      API.setAppState({ width: 800, height: 600 });
+      down(20, 30, true);
+      move(220, 30);
+      up(220, 30);
+      fireEvent.pointerDown(
+        GlobalTestState.interactiveCanvas,
+        event(100, 10, 0.5, { button, buttons: 32 }),
+      );
+      expect(h.state.activeTool.type).toBe("eraser");
+      move(100, 30, 0.5, { button: -1, buttons: 32 });
+      move(100, 50, 0.5, { button: -1, buttons: 32 });
+      up(100, 50, { button: 5 });
+      expect(h.elements.filter((el) => !el.isDeleted)).toHaveLength(0);
+      expect(h.state.activeTool.type).toBe("eraser");
+      // A toggled driver remains an eraser across lifts. Only an actual normal
+      // pen contact confirms it has switched back (hover buttons=0 is ambiguous).
+      down(250, 30);
+      expect(h.state.activeTool.type).toBe("freedraw");
+      move(300, 50);
+      up(300, 50);
+      expect(h.elements.filter((el) => !el.isDeleted)[0].type).toBe("freedraw");
+    },
+  );
+
+  it("accepts combined pen-contact/eraser bits and stays in eraser mode across strokes", () => {
+    API.setAppState({ width: 800, height: 600 });
+    down(20, 30, true);
+    move(220, 30);
+    up(220, 30);
+    down(20, 80, true);
+    move(220, 80);
+    up(220, 80);
+    for (const y of [30, 80]) {
+      fireEvent.pointerDown(
+        GlobalTestState.interactiveCanvas,
+        event(100, y, 0.5, { button: 0, buttons: 33 }),
+      );
+      up(100, y, { button: 5 });
+      expect(h.state.activeTool.type).toBe("eraser");
+    }
+    expect(h.elements.filter((el) => !el.isDeleted)).toHaveLength(0);
+  });
+
+  it("switches during hover without erasing, then starts contact from pointermove", () => {
+    API.setAppState({ width: 800, height: 600 });
+    down(20, 30, true);
+    move(220, 30);
+    up(220, 30);
+    fireEvent.pointerDown(
+      GlobalTestState.interactiveCanvas,
+      event(100, 30, 0, { button: 5, buttons: 32 }),
+    );
+    expect(h.state.activeTool.type).toBe("eraser");
+    move(100, 30, 0, { button: -1, buttons: 32 });
+    expect(h.elements[0].isDeleted).toBe(false);
+    expect(h.state.cursorButton).toBe("up");
+    move(100, 10, 0.5, { button: -1, buttons: 32 });
+    move(100, 50, 0.7, { button: -1, buttons: 32 });
+    up(100, 50, { button: 5 });
+    expect(h.elements[0].isDeleted).toBe(true);
+  });
+
+  it("does not erase from a hover-only button tap", () => {
+    API.setAppState({ width: 800, height: 600 });
+    down(20, 30, true);
+    move(220, 30);
+    up(220, 30);
+    move(100, 30, 0, { button: 5, buttons: 32 });
+    up(100, 30, { button: 5 });
+    expect(h.state.activeTool.type).toBe("eraser");
+    expect(h.elements[0].isDeleted).toBe(false);
+    down(260, 30);
+    up(260, 30);
+    expect(h.state.activeTool.type).toBe("freedraw");
+  });
+
+  it.each(["pointercancel", "blur"])(
+    "cancels pending erasure on %s without deleting ink",
+    (kind) => {
+      API.setAppState({ width: 800, height: 600 });
+      down(20, 30, true);
+      move(220, 30);
+      up(220, 30);
+      fireEvent.pointerDown(
+        GlobalTestState.interactiveCanvas,
+        event(100, 10, 0.5, { button: 5, buttons: 32 }),
+      );
+      move(100, 50, 0.5, { button: -1, buttons: 32 });
+      if (kind === "blur") {
+        fireEvent.blur(window);
+      } else {
+        fireEvent.pointerCancel(
+          GlobalTestState.interactiveCanvas,
+          event(100, 50, 0, { buttons: 0 }),
+        );
+      }
+      expect(h.elements[0].isDeleted).toBe(false);
+      expect(h.state.activeTool.type).toBe("freedraw");
+      down(260, 30);
+      move(300, 50);
+      up(300, 50);
+      expect(h.elements.filter((el) => !el.isDeleted)).toHaveLength(2);
+    },
+  );
+
+  it("ignores another pointer's release during hardware erasing", () => {
     API.setAppState({ width: 800, height: 600 });
     down(20, 30, true);
     move(220, 30);
@@ -352,11 +460,68 @@ describe("straight ink pen input and rendered previews", () => {
       GlobalTestState.interactiveCanvas,
       event(100, 10, 0.5, { button: 5, buttons: 32 }),
     );
-    expect(h.state.activeTool.type).toBe("eraser");
-    move(100, 30, 0.5, { button: -1, buttons: 32 });
     move(100, 50, 0.5, { button: -1, buttons: 32 });
+    fireEvent.pointerUp(
+      window,
+      event(0, 0, 0, { pointerId: 99, pointerType: "touch", buttons: 0 }),
+    );
+    expect(h.elements[0].isDeleted).toBe(false);
+    expect(h.state.cursorButton).toBe("down");
     up(100, 50, { button: 5 });
-    expect(h.elements.filter((el) => !el.isDeleted)).toHaveLength(0);
+    expect(h.elements[0].isDeleted).toBe(true);
+  });
+
+  it("does not override manually selected eraser or a later tool selection", () => {
+    UI.clickTool("eraser");
+    down(20, 30);
+    up(20, 30);
+    expect(h.state.activeTool.type).toBe("eraser");
+    UI.clickTool("freedraw");
+    move(100, 30, 0, { button: 5, buttons: 32 });
+    UI.clickTool("rectangle");
+    down(20, 30);
+    move(60, 70);
+    up(60, 70);
+    expect(h.elements[0].type).toBe("rectangle");
+  });
+
+  it.each(["mouse", "touch"])(
+    "does not interpret %s button bits as pen erasing",
+    (pointerType) => {
+      move(100, 30, 0, { pointerType, button: 5, buttons: 32 });
+      expect(h.state.activeTool.type).toBe("freedraw");
+    },
+  );
+
+  it("keeps right-click assigned to its existing function", () => {
+    move(100, 30, 0, { button: 2, buttons: 2 });
+    expect(h.state.activeTool.type).toBe("freedraw");
+    expect(h.elements).toHaveLength(0);
+  });
+
+  it("does not switch tools in view mode", () => {
+    API.setAppState({ viewModeEnabled: true });
+    move(100, 30, 0, { button: 5, buttons: 32 });
+    expect(h.state.activeTool.type).toBe("freedraw");
+    fireEvent.pointerDown(
+      GlobalTestState.interactiveCanvas,
+      event(100, 30, 0.5, { button: 5, buttons: 32 }),
+    );
+    up(100, 30, { button: 5 });
+    expect(h.elements).toHaveLength(0);
+    API.setAppState({ viewModeEnabled: false });
+  });
+
+  it("does not switch a host-controlled tool", async () => {
+    GlobalTestState.renderResult.unmount();
+    await render(<Excalidraw activeTool={{ type: "freedraw" }} />);
+    move(100, 30, 0, { button: 5, buttons: 32 });
+    expect(h.state.activeTool.type).toBe("freedraw");
+    fireEvent.pointerDown(
+      GlobalTestState.interactiveCanvas,
+      event(100, 30, 0.5, { button: 5, buttons: 32 }),
+    );
+    up(100, 30, { button: 5 });
     expect(h.state.activeTool.type).toBe("freedraw");
   });
 

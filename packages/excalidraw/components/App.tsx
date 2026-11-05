@@ -435,6 +435,7 @@ import { isOverScrollBars } from "../scene/scrollbars";
 import { isMaybeMermaidDefinition } from "../mermaid";
 import { LassoTrail } from "../lasso";
 import { EraserTrail, isEraserProtectedElement } from "../eraser";
+import { isPenEraser, isPenEraserHover } from "../penInput";
 import { getShortcutKey } from "../shortcut";
 import { tryParseSpreadsheet } from "../charts";
 
@@ -512,7 +513,6 @@ import type {
   CollaboratorPointer,
   ToolType,
   OnUserFollowedPayload,
-  UnsubscribeCallback,
   EmbedsValidationStatus,
   ElementsPendingErasure,
   ExcalidrawImperativeAPIEventMap,
@@ -764,6 +764,8 @@ class App extends React.Component<AppProps, AppState> {
   drawShape = new AppDrawShape(this);
   laserTrails = new LaserTrails(this);
   eraserTrail = new EraserTrail(this);
+  private toolBeforePenEraser: AppState["activeTool"] | null = null;
+  private penEraserStrokeId: number | null = null;
   lassoTrail = new LassoTrail(this);
   cursorHints = new CursorHints(this);
 
@@ -3245,6 +3247,11 @@ class App extends React.Component<AppProps, AppState> {
 
   private onBlur = withBatchedUpdates(() => {
     this.straightInk.cancel();
+    if (this.penEraserStrokeId !== null) {
+      this.maybeCleanupAfterMissingPointerUp(null);
+      this.penEraserStrokeId = null;
+    }
+    this.restorePenTool();
     this.pan.setSpaceHeld(false);
     this.setState({
       isBindingEnabled: this.state.bindingPreference === "enabled",
@@ -4228,6 +4235,13 @@ class App extends React.Component<AppProps, AppState> {
         this.straightInk.cancel,
         false,
       ),
+      addEventListener(this.ownerWindow, "pointercancel", (event) => {
+        if (event.pointerId === this.penEraserStrokeId) {
+          this.maybeCleanupAfterMissingPointerUp(event);
+          this.penEraserStrokeId = null;
+          this.restorePenTool();
+        }
+      }),
       addEventListener(
         this.excalidrawContainerRef.current,
         EVENT.WHEEL,
@@ -7923,6 +7937,22 @@ class App extends React.Component<AppProps, AppState> {
       y: scenePointerY,
     };
 
+    if (
+      this.state.cursorButton !== "down" &&
+      isPenEraser(event) &&
+      !this.props.activeTool &&
+      !this.pan.isActive() &&
+      !this.pan.isSpaceHeld()
+    ) {
+      if (event.pressure > 0) {
+        // A hover button press can make contact arrive as pointermove instead
+        // of a second pointerdown (Pointer Events chorded-button semantics).
+        this.handleCanvasPointerDown(event);
+        return;
+      }
+      this.syncPenTool(event);
+    }
+
     this.updateMultiTouchGesture(event);
 
     if (
@@ -8612,11 +8642,72 @@ class App extends React.Component<AppProps, AppState> {
     }
   }
 
+  private restorePenTool = (callback?: () => void) => {
+    const previous = this.toolBeforePenEraser;
+    this.toolBeforePenEraser = null;
+    if (
+      previous &&
+      !this.props.activeTool &&
+      this.state.activeTool.type === "eraser" &&
+      this.state.activeTool.lastActiveTool === previous
+    ) {
+      this.setState({ activeTool: previous }, callback);
+      return true;
+    }
+    return false;
+  };
+
+  private syncPenTool = (
+    event: React.PointerEvent<HTMLElement>,
+    callback?: () => void,
+  ) => {
+    if (
+      !this.isInteractionEnabled() ||
+      this.state.viewModeEnabled ||
+      this.props.activeTool
+    ) {
+      return false;
+    }
+    if (isPenEraser(event)) {
+      if (this.state.activeTool.type !== "eraser") {
+        this.toolBeforePenEraser = this.state.activeTool;
+        this.setState(
+          {
+            activeTool: updateActiveTool(this.state, {
+              type: "eraser",
+              lastActiveTool: this.toolBeforePenEraser,
+            }),
+            selectedElementIds: {},
+          },
+          callback,
+        );
+        return true;
+      }
+    } else if (
+      event.type === "pointerdown" &&
+      event.button === POINTER_BUTTON.MAIN &&
+      (event.pointerType === "pen" || event.pointerType === "mouse")
+    ) {
+      return this.restorePenTool(callback);
+    }
+    return false;
+  };
+
   private handleCanvasPointerDown = (
     event: React.PointerEvent<HTMLElement>,
   ) => {
     // A palm touching the canvas must not terminate an active pen stroke.
     if (this.straightInk.ignorePalm(event)) {
+      return;
+    }
+    if (
+      this.penEraserStrokeId !== null &&
+      event.pointerId !== this.penEraserStrokeId
+    ) {
+      return;
+    }
+    if (isPenEraserHover(event)) {
+      this.syncPenTool(event);
       return;
     }
     if (
@@ -8668,6 +8759,9 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     this.maybeCleanupAfterMissingPointerUp(event.nativeEvent);
+    if (this.syncPenTool(event, () => this.handleCanvasPointerDown(event))) {
+      return;
+    }
     // laser pointer is a presentation aid, not an edit — using it while
     // following someone shouldn't break follow
     if (this.state.activeTool.type !== "laser") {
@@ -8801,65 +8895,11 @@ class App extends React.Component<AppProps, AppState> {
     });
     this.savePointer(event.clientX, event.clientY, "down");
 
-    if (
-      event.button === POINTER_BUTTON.ERASER &&
-      // must not switch tools while non-interactive (reachable when the
-      // active tool is allowed via `interaction.enabled.tools`) or while
-      // the active tool is host-controlled
-      this.isInteractionEnabled() &&
-      !this.props.activeTool &&
-      this.state.activeTool.type !== TOOL_TYPE.eraser
-    ) {
-      this.setState(
-        {
-          activeTool: updateActiveTool(this.state, {
-            type: TOOL_TYPE.eraser,
-            lastActiveTool: this.state.activeTool,
-          }),
-        },
-        () => {
-          this.handleCanvasPointerDown(event);
-          const onPointerUp = () => {
-            unsubPointerUp();
-            unsubCleanup?.();
-            if (isEraserActive(this.state)) {
-              this.setState({
-                activeTool: updateActiveTool(this.state, {
-                  ...(this.state.activeTool.lastActiveTool || {
-                    type: TOOL_TYPE.selection,
-                  }),
-                  lastActiveTool: null,
-                }),
-              });
-            }
-          };
-
-          const unsubPointerUp = addEventListener(
-            this.ownerWindow,
-            EVENT.POINTER_UP,
-            onPointerUp,
-            {
-              once: true,
-            },
-          );
-          let unsubCleanup: UnsubscribeCallback | undefined;
-          // subscribe inside rAF lest it'd be triggered on the same pointerdown
-          // if we start erasing while coming from blurred document since
-          // we cleanup pointer events on focus
-          this.ownerWindow.requestAnimationFrame(() => {
-            unsubCleanup =
-              this.missingPointerEventCleanupEmitter.once(onPointerUp);
-          });
-        },
-      );
-      return;
-    }
-
     // only handle left mouse button or touch
     if (
       event.button !== POINTER_BUTTON.MAIN &&
       event.button !== POINTER_BUTTON.TOUCH &&
-      event.button !== POINTER_BUTTON.ERASER
+      !isPenEraser(event)
     ) {
       return;
     }
@@ -9092,6 +9132,9 @@ class App extends React.Component<AppProps, AppState> {
     );
 
     if (this.state.activeTool.type === "eraser") {
+      if (isPenEraser(event)) {
+        this.penEraserStrokeId = event.pointerId;
+      }
       this.eraserTrail.startPath(
         pointerDownState.lastCoords.x,
         pointerDownState.lastCoords.y,
@@ -10720,6 +10763,12 @@ class App extends React.Component<AppProps, AppState> {
     pointerDownState: PointerDownState,
   ) {
     return withBatchedUpdatesThrottled((event: PointerEvent) => {
+      if (
+        this.penEraserStrokeId !== null &&
+        event.pointerId !== this.penEraserStrokeId
+      ) {
+        return;
+      }
       if (this.straightInk.isOtherPointer(event)) {
         return;
       }
@@ -11673,6 +11722,12 @@ class App extends React.Component<AppProps, AppState> {
     pointerDownState: PointerDownState,
   ): (event: PointerEvent) => void {
     return withBatchedUpdates((childEvent: PointerEvent) => {
+      if (this.penEraserStrokeId !== null) {
+        if (childEvent.pointerId !== this.penEraserStrokeId) {
+          return;
+        }
+        this.penEraserStrokeId = null;
+      }
       if (
         childEvent.type === "pointerup" &&
         this.straightInk.isOtherPointer(childEvent)
@@ -12468,6 +12523,10 @@ class App extends React.Component<AppProps, AppState> {
 
       if (isEraserActive(this.state) && pointerStart && pointerEnd) {
         this.eraserTrail.endPath();
+        if (childEvent.type !== "pointerup") {
+          this.restoreReadyToEraseElements();
+          return;
+        }
 
         const draggedDistance = pointDistance(
           pointFrom(pointerStart.clientX, pointerStart.clientY),

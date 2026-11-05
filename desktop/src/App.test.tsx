@@ -15,6 +15,7 @@ import { API } from "../../packages/excalidraw/tests/helpers/api";
 import { DesktopApp } from "./App";
 import { defaults } from "./settings";
 import * as snapshots from "./boardSnapshot";
+import { TabletInputProbe } from "./TabletInputProbe";
 
 const native = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -41,6 +42,67 @@ const empty = JSON.stringify({
   elements: [],
   files: {},
   appState: {},
+});
+
+describe("opt-in tablet input probe", () => {
+  it("records pen state only while open, stops on request and clears on close", () => {
+    render(<TabletInputProbe />);
+    expect(screen.queryByRole("group", { name: "数位板检测区域" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "数位板输入检测" }));
+    const pad = screen.getByRole("group", { name: "数位板检测区域" });
+    const report = screen.getByRole("textbox", {
+      name: "检测记录（可复制）",
+    }) as HTMLTextAreaElement;
+    const sample = {
+      pointerType: "pen",
+      pointerId: 41,
+      button: -1,
+      buttons: 32,
+      pressure: 0.75,
+    };
+    fireEvent.pointerMove(pad, sample);
+    expect(report.value).toContain('"buttons":32');
+    expect(report.value).toContain('"eraser":true');
+    expect(report.value).toContain('"pressure":0.75');
+    const recorded = report.value;
+    fireEvent.pointerMove(pad, { ...sample, pressure: 0.76 });
+    expect(report.value).toBe(recorded);
+    fireEvent.click(screen.getByRole("button", { name: "停止检测" }));
+    fireEvent.pointerUp(pad, { ...sample, buttons: 0, pressure: 0 });
+    expect(report.value).toBe(recorded);
+    fireEvent.click(screen.getByRole("button", { name: "数位板输入检测" }));
+    fireEvent.click(screen.getByRole("button", { name: "数位板输入检测" }));
+    expect(screen.getByRole("textbox")).toHaveValue("");
+  });
+
+  it("bounds the report and excludes coordinates, arbitrary text and outside events", () => {
+    render(<TabletInputProbe />);
+    fireEvent.click(screen.getByRole("button", { name: "数位板输入检测" }));
+    const pad = screen.getByRole("group", { name: "数位板检测区域" });
+    for (let i = 0; i < 130; i++) {
+      fireEvent.pointerMove(pad, {
+        pointerType: "pen",
+        button: -1,
+        buttons: i % 2 ? 32 : 0,
+        pressure: 0,
+        clientX: 12345,
+      });
+    }
+    const report = screen.getByRole("textbox") as HTMLTextAreaElement;
+    expect(report.value.split("\n")).toHaveLength(97);
+    expect(report.value).not.toContain("12345");
+    fireEvent.click(screen.getByRole("button", { name: "清空记录" }));
+    fireEvent.keyDown(pad, { key: "private-text", code: "KeyP" });
+    fireEvent.pointerDown(window, {
+      pointerType: "pen",
+      buttons: 32,
+      pressure: 1,
+    });
+    expect(report.value).not.toContain("private-text");
+    expect(report.value).not.toContain("pointerdown");
+    fireEvent.keyDown(pad, { key: "e", code: "KeyE" });
+    expect(report.value).toContain('"code":"KeyE"');
+  });
 });
 
 beforeEach(() => {

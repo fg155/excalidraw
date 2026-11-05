@@ -826,6 +826,8 @@ export type ElementRenderOffsets = ReadonlyMap<
 
 export interface ExcalidrawProps {
   /** Opt-in freehand-to-line gestures. Omitted keeps upstream behavior. */
+  /** Transient native tool hint; coordinates and pressure still use DOM events. */
+  nativePenTool?: "pen" | "eraser" | null;
   straightInk?: {
     version: 1;
     shift: boolean;

@@ -14,6 +14,7 @@ import { defaults, drawingPreferences, parseSettings } from "./settings";
 import { BoardHome, boardLabel as label } from "./BoardHome";
 import { BackgroundPanel } from "./BackgroundPanel";
 import { TabletInputProbe } from "./TabletInputProbe";
+import { useNativeTablet } from "./nativeTablet";
 
 import "./styles.css";
 
@@ -60,6 +61,7 @@ const filename = (name: string) => {
 };
 
 export function DesktopApp({ host }: { host: HTMLElement }) {
+  const nativeTablet = useNativeTablet();
   const ownerDocument = host.ownerDocument;
   const ownerWindow = ownerDocument.defaultView!;
   const [context, setContext] = useState<Context | null>(null);
@@ -443,6 +445,9 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
         {document && (
           <main className="editor-area" inert={busy || panel !== null}>
             <Excalidraw
+              nativePenTool={
+                nativeTablet.mode === "unknown" ? null : nativeTablet.mode
+              }
               key={document.key}
               initialData={document.initialData}
               theme={settings.theme}
@@ -736,7 +741,7 @@ export function DesktopApp({ host }: { host: HTMLElement }) {
                 >
                   历史备份
                 </button>
-                <TabletInputProbe />
+                <TabletInputProbe nativeTablet={nativeTablet} />
               </>
             )}
             {panel === "recovery" && (

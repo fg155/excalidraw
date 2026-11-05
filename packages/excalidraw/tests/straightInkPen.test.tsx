@@ -493,6 +493,102 @@ describe("straight ink pen input and rendered previews", () => {
     },
   );
 
+  it("uses native eraser state for WebKit mouse events and restores the pen", () => {
+    API.setAppState({ width: 800, height: 600 });
+    down(20, 30, true);
+    move(220, 30);
+    up(220, 30);
+    GlobalTestState.renderResult.rerender(
+      <Excalidraw nativePenTool="eraser" />,
+    );
+    expect(h.state.activeTool.type).toBe("eraser");
+    fireEvent.pointerDown(
+      GlobalTestState.interactiveCanvas,
+      event(100, 10, 0.5, { pointerType: "mouse" }),
+    );
+    move(100, 50, 0.5, { pointerType: "mouse" });
+    up(100, 50, { pointerType: "mouse" });
+    expect(h.elements[0].isDeleted).toBe(true);
+    GlobalTestState.renderResult.rerender(<Excalidraw nativePenTool="pen" />);
+    expect(h.state.activeTool.type).toBe("freedraw");
+    fireEvent.pointerDown(
+      GlobalTestState.interactiveCanvas,
+      event(260, 30, 0.5, { pointerType: "mouse" }),
+    );
+    move(300, 50, 0.5, { pointerType: "mouse" });
+    up(300, 50, { pointerType: "mouse" });
+    expect(h.elements.filter((element) => !element.isDeleted)).toHaveLength(1);
+  });
+
+  it("defers native tool changes until the current ink stroke ends", () => {
+    down(20, 30);
+    move(80, 50);
+    GlobalTestState.renderResult.rerender(
+      <Excalidraw nativePenTool="eraser" />,
+    );
+    expect(h.state.activeTool.type).toBe("freedraw");
+    move(100, 60);
+    up(100, 60);
+    expect(h.elements).toHaveLength(1);
+    expect(h.elements[0].isDeleted).toBe(false);
+    expect(h.state.activeTool.type).toBe("eraser");
+    GlobalTestState.renderResult.rerender(<Excalidraw nativePenTool={null} />);
+    expect(h.state.activeTool.type).toBe("freedraw");
+  });
+
+  it("finishes native erasure before applying a queued pen switch", () => {
+    API.setAppState({ width: 800, height: 600 });
+    down(20, 30, true);
+    move(220, 30);
+    up(220, 30);
+    GlobalTestState.renderResult.rerender(
+      <Excalidraw nativePenTool="eraser" />,
+    );
+    fireEvent.pointerDown(
+      GlobalTestState.interactiveCanvas,
+      event(100, 10, 0.5, { pointerType: "mouse" }),
+    );
+    move(100, 50, 0.5, { pointerType: "mouse" });
+    GlobalTestState.renderResult.rerender(<Excalidraw nativePenTool="pen" />);
+    expect(h.state.activeTool.type).toBe("eraser");
+    up(100, 50, { pointerType: "mouse" });
+    expect(h.elements[0].isDeleted).toBe(true);
+    expect(h.state.activeTool.type).toBe("freedraw");
+  });
+
+  it("cancels native erasure on blur without deleting ink", () => {
+    API.setAppState({ width: 800, height: 600 });
+    down(20, 30, true);
+    move(220, 30);
+    up(220, 30);
+    GlobalTestState.renderResult.rerender(
+      <Excalidraw nativePenTool="eraser" />,
+    );
+    fireEvent.pointerDown(
+      GlobalTestState.interactiveCanvas,
+      event(100, 10, 0.5, { pointerType: "mouse" }),
+    );
+    move(100, 50, 0.5, { pointerType: "mouse" });
+    fireEvent.blur(window);
+    GlobalTestState.renderResult.rerender(<Excalidraw nativePenTool={null} />);
+    expect(h.elements[0].isDeleted).toBe(false);
+    expect(h.state.activeTool.type).toBe("freedraw");
+  });
+
+  it("keeps native tool hints out of view mode and host-controlled tools", () => {
+    GlobalTestState.renderResult.rerender(
+      <Excalidraw viewModeEnabled nativePenTool="eraser" />,
+    );
+    expect(h.state.activeTool.type).toBe("freedraw");
+    GlobalTestState.renderResult.rerender(
+      <Excalidraw activeTool={{ type: "rectangle" }} nativePenTool="pen" />,
+    );
+    GlobalTestState.renderResult.rerender(
+      <Excalidraw activeTool={{ type: "rectangle" }} nativePenTool="eraser" />,
+    );
+    expect(h.state.activeTool.type).toBe("rectangle");
+  });
+
   it("keeps right-click assigned to its existing function", () => {
     move(100, 30, 0, { button: 2, buttons: 2 });
     expect(h.state.activeTool.type).toBe("freedraw");

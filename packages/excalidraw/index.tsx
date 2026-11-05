@@ -209,6 +209,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
       <InitializeApp langCode={langCode} theme={theme}>
         <App
           straightInk={props.straightInk}
+          nativePenTool={props.nativePenTool}
           onExport={onExport}
           className={className}
           ownerDocument={ownerDocument}

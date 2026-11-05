@@ -7,6 +7,11 @@ use tauri::{Manager, State};
 type Result<T> = storage::Result<T>;
 struct AppStorage(Mutex<Storage>);
 
+#[tauri::command]
+fn get_tablet_state(state: State<crate::tablet::TabletInput>) -> crate::tablet::Snapshot {
+    state.snapshot()
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Context { directory: Option<PathBuf>, data_directory: PathBuf, settings: Option<String> }
@@ -143,9 +148,12 @@ pub fn run() {
         .setup(|app| {
             let storage = Storage::new(app.path().app_data_dir()?).map_err(std::io::Error::other)?;
             app.manage(AppStorage(Mutex::new(storage)));
+            app.manage(crate::tablet::TabletInput::default());
+            #[cfg(target_os = "macos")]
+            crate::tablet::macos::install(app)?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_context,choose_directory,list_boards,read_board,save_board,backup_board,rename_board,trash_board,list_trash,restore_trash,save_settings,import_settings,export_settings,import_board,list_recovery,read_recovery])
+        .invoke_handler(tauri::generate_handler![get_tablet_state,get_context,choose_directory,list_boards,read_board,save_board,backup_board,rename_board,trash_board,list_trash,restore_trash,save_settings,import_settings,export_settings,import_board,list_recovery,read_recovery])
         .run(tauri::generate_context!())
         .expect("Failed to run Excalidraw Personal");
 }

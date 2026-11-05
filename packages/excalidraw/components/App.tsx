@@ -766,6 +766,7 @@ class App extends React.Component<AppProps, AppState> {
   eraserTrail = new EraserTrail(this);
   private toolBeforePenEraser: AppState["activeTool"] | null = null;
   private penEraserStrokeId: number | null = null;
+  private nativePenToolPending = false;
   lassoTrail = new LassoTrail(this);
   cursorHints = new CursorHints(this);
 
@@ -4296,6 +4297,30 @@ class App extends React.Component<AppProps, AppState> {
 
     this.handleInteractionStateChange(prevProps, prevState);
     this.handleForcedToolChange(prevProps, prevState);
+
+    if (prevProps.nativePenTool !== this.props.nativePenTool) {
+      this.nativePenToolPending = true;
+    }
+    // A tool notification must never reinterpret a stroke already in progress.
+    if (
+      this.nativePenToolPending &&
+      this.state.cursorButton === "up" &&
+      !this.state.editingTextElement
+    ) {
+      this.nativePenToolPending = false;
+      if (
+        this.isInteractionEnabled() &&
+        !this.state.viewModeEnabled &&
+        !this.props.viewModeEnabled &&
+        !this.props.activeTool
+      ) {
+        if (this.props.nativePenTool === "eraser") {
+          this.activatePenEraser();
+        } else {
+          this.restorePenTool();
+        }
+      }
+    }
 
     this.appStateObserver.flush(prevState);
 
@@ -8657,6 +8682,28 @@ class App extends React.Component<AppProps, AppState> {
     return false;
   };
 
+  private isEraserInput = (event: React.PointerEvent<HTMLElement>) =>
+    isPenEraser(event) ||
+    (event.pointerType === "mouse" && this.props.nativePenTool === "eraser");
+
+  private activatePenEraser = (callback?: () => void) => {
+    if (this.state.activeTool.type === "eraser") {
+      return false;
+    }
+    this.toolBeforePenEraser = this.state.activeTool;
+    this.setState(
+      {
+        activeTool: updateActiveTool(this.state, {
+          type: "eraser",
+          lastActiveTool: this.toolBeforePenEraser,
+        }),
+        selectedElementIds: {},
+      },
+      callback,
+    );
+    return true;
+  };
+
   private syncPenTool = (
     event: React.PointerEvent<HTMLElement>,
     callback?: () => void,
@@ -8668,21 +8715,8 @@ class App extends React.Component<AppProps, AppState> {
     ) {
       return false;
     }
-    if (isPenEraser(event)) {
-      if (this.state.activeTool.type !== "eraser") {
-        this.toolBeforePenEraser = this.state.activeTool;
-        this.setState(
-          {
-            activeTool: updateActiveTool(this.state, {
-              type: "eraser",
-              lastActiveTool: this.toolBeforePenEraser,
-            }),
-            selectedElementIds: {},
-          },
-          callback,
-        );
-        return true;
-      }
+    if (this.isEraserInput(event)) {
+      return this.activatePenEraser(callback);
     } else if (
       event.type === "pointerdown" &&
       event.button === POINTER_BUTTON.MAIN &&
@@ -9132,7 +9166,7 @@ class App extends React.Component<AppProps, AppState> {
     );
 
     if (this.state.activeTool.type === "eraser") {
-      if (isPenEraser(event)) {
+      if (this.isEraserInput(event)) {
         this.penEraserStrokeId = event.pointerId;
       }
       this.eraserTrail.startPath(

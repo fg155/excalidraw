@@ -16,9 +16,11 @@ import { DesktopApp } from "./App";
 import { defaults } from "./settings";
 import * as snapshots from "./boardSnapshot";
 import { TabletInputProbe } from "./TabletInputProbe";
+import { subscribeNativeTablet } from "./nativeTablet";
 
 const native = vi.hoisted(() => ({
   invoke: vi.fn(),
+  listen: vi.fn().mockResolvedValue(() => {}),
   onCloseRequested: vi.fn().mockResolvedValue(() => {}),
   destroy: vi.fn().mockResolvedValue(undefined),
 }));
@@ -27,6 +29,58 @@ vi.mock("@tauri-apps/api/core", () => ({
   isTauri: () => true,
 }));
 vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => native }));
+vi.mock("@tauri-apps/api/event", () => ({ listen: native.listen }));
+
+describe("native tablet subscription", () => {
+  it("ignores stale snapshots, duplicate events and malformed state", async () => {
+    const changes = vi.fn();
+    const cleanup = vi.fn();
+    let emit!: (event: { payload: unknown }) => void;
+    let resolveSnapshot!: (value: unknown) => void;
+    native.listen.mockImplementationOnce(async (_name, handler) => {
+      emit = handler;
+      return cleanup;
+    });
+    native.invoke.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSnapshot = resolve;
+        }),
+    );
+    const dispose = subscribeNativeTablet(changes);
+    await Promise.resolve();
+    const eraser = { mode: "eraser", source: "proximity", revision: 2 };
+    emit({ payload: eraser });
+    emit({ payload: eraser });
+    emit({ payload: { ...eraser, mode: "bad", revision: 3 } });
+    resolveSnapshot({ mode: "pen", source: "tablet", revision: 1 });
+    await Promise.resolve();
+    expect(changes).toHaveBeenCalledTimes(1);
+    expect(changes).toHaveBeenLastCalledWith(eraser);
+    dispose();
+    emit({ payload: { ...eraser, mode: "pen", revision: 4 } });
+    expect(changes).toHaveBeenCalledTimes(1);
+    expect(cleanup).toHaveBeenCalledTimes(1);
+  });
+
+  it("removes a listener that finishes registering after unmount", async () => {
+    const cleanup = vi.fn();
+    let registered!: (value: () => void) => void;
+    native.listen.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          registered = resolve;
+        }),
+    );
+    const changes = vi.fn();
+    subscribeNativeTablet(changes)();
+    registered(cleanup);
+    await Promise.resolve();
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(native.invoke).not.toHaveBeenCalled();
+    expect(changes).not.toHaveBeenCalled();
+  });
+});
 
 const boards = new Map<string, { content: string; revision: string }>();
 const trash = new Map<

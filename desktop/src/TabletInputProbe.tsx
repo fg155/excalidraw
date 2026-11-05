@@ -1,26 +1,40 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import type { NativeTabletState } from "./nativeTablet";
 
 import type { KeyboardEvent, PointerEvent } from "react";
 
 // Opt-in, local-only diagnostics: no drawing contents, coordinates, device
 // identifiers, general keystrokes, background listeners or persisted reports.
-export function TabletInputProbe() {
+export function TabletInputProbe({
+  nativeTablet,
+}: {
+  nativeTablet?: NativeTabletState;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <div className="tablet-probe">
       <button aria-expanded={open} onClick={() => setOpen(!open)}>
         数位板输入检测
       </button>
-      {open && <Probe />}
+      {open && <Probe nativeTablet={nativeTablet} />}
     </div>
   );
 }
 
-function Probe() {
+function Probe({ nativeTablet }: { nativeTablet?: NativeTabletState }) {
   const [recording, setRecording] = useState(true);
   const [lines, setLines] = useState<string[]>([]);
   const [runtime, setRuntime] = useState("");
   const previous = useRef("");
+  useEffect(() => {
+    if (recording && nativeTablet) {
+      setLines((items) => [
+        ...items.slice(-95),
+        JSON.stringify({ event: "native-tool", ...nativeTablet }),
+      ]);
+    }
+  }, [nativeTablet, recording]);
   const add = (line: string) => {
     if (!recording) {
       return;

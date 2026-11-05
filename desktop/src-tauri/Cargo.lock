@@ -1028,6 +1028,7 @@ dependencies = [
 name = "excalidraw-personal"
 version = "0.1.0"
 dependencies = [
+ "cc",
  "rfd",
  "serde",
  "serde_json",

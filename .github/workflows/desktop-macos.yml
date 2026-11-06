@@ -33,6 +33,13 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Test native tablet hover and exception handling
+        run: |
+          clang -fobjc-arc -fblocks -fobjc-exceptions -Wall -Wextra -Werror -Wno-unused-parameter \
+            desktop/src-tauri/tests/tablet_macos_test.m -framework AppKit -framework ApplicationServices \
+            -o "$RUNNER_TEMP/tablet-macos-test"
+          "$RUNNER_TEMP/tablet-macos-test"
+
       - uses: actions/setup-node@v6
         with:
           node-version: "24"

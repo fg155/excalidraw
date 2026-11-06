@@ -7,6 +7,7 @@ fn main() {
             .file("src/tablet_macos.m")
             .flag("-fobjc-arc")
             .flag("-fblocks")
+            .flag("-fobjc-exceptions")
             .compile("tablet_input");
         println!("cargo:rustc-link-lib=framework=AppKit");
     }

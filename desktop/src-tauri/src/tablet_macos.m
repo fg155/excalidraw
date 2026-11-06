@@ -10,6 +10,7 @@ static NSMutableDictionary<NSNumber *, NSNumber *> *tools;
 static void (*notifyTool)(int, int);
 static int lastMode = -1;
 static int lastSource = -1;
+static bool inputUnavailable;
 
 static void report(int mode, int source) {
     if (lastMode == mode && lastSource == source) return;
@@ -20,7 +21,7 @@ static void report(int mode, int source) {
 
 static void reset(void) {
     [tools removeAllObjects];
-    report(0, 5);
+    report(0, inputUnavailable ? 0 : 5);
 }
 
 static void stop(void) {
@@ -36,6 +37,69 @@ static void stop(void) {
     notifyTool = NULL;
 }
 
+// NSEvent.subtype is not valid on standalone tablet events. Classify the
+// native type first, and read subtype only for the supported mouse types.
+// https://developer.apple.com/documentation/appkit/nsevent/subtype
+static void inspectEvent(NSEvent *event) {
+    if (inputUnavailable) return;
+    int mode = 0;
+    int source = 0;
+    @try {
+        NSWindow *window = event.window;
+        if (window && window != targetWindow) return;
+        NSEventType type = event.type;
+        BOOL proximity = type == NSEventTypeTabletProximity;
+        BOOL point = type == NSEventTypeTabletPoint;
+        if (!proximity && !point) {
+            switch (type) {
+                case NSEventTypeMouseMoved:
+                case NSEventTypeLeftMouseDown:
+                case NSEventTypeLeftMouseUp:
+                case NSEventTypeLeftMouseDragged:
+                case NSEventTypeRightMouseDown:
+                case NSEventTypeRightMouseUp:
+                case NSEventTypeRightMouseDragged:
+                case NSEventTypeOtherMouseDown:
+                case NSEventTypeOtherMouseUp:
+                case NSEventTypeOtherMouseDragged: {
+                    NSEventSubtype subtype = event.subtype;
+                    proximity = subtype == NSEventSubtypeTabletProximity;
+                    point = subtype == NSEventSubtypeTabletPoint;
+                    break;
+                }
+                default: return;
+            }
+        }
+        if (proximity) {
+            NSNumber *key = @(event.deviceID);
+            if (event.isEnteringProximity) {
+                NSPointingDeviceType device = event.pointingDeviceType;
+                mode = device == NSPointingDeviceTypeEraser ? 2 :
+                    device == NSPointingDeviceTypePen ? 1 : 0;
+                tools[key] = @(mode);
+            } else {
+                [tools removeObjectForKey:key];
+            }
+            source = 2;
+        } else if (point) {
+            // Device type is only valid on proximity events. Missing proximity
+            // leaves the tool unknown until re-entry, never guesses eraser.
+            mode = [tools[@(event.deviceID)] intValue];
+            source = 3;
+        } else {
+            source = 4;
+        }
+    } @catch (NSException *exception) {
+        // Rust catch_unwind cannot catch Objective-C exceptions. Disable only
+        // this optional bridge until restart; WKWebView still receives events.
+        inputUnavailable = true;
+        [tools removeAllObjects];
+        mode = source = 0;
+    }
+    // Keep the Rust callback outside the Objective-C exception boundary.
+    report(mode, source);
+}
+
 bool tablet_input_install(void *window, void (*callback)(int, int)) {
     NSCAssert(NSThread.isMainThread, @"Tablet observer must run on main thread");
     if (monitor) stop();
@@ -43,6 +107,7 @@ bool tablet_input_install(void *window, void (*callback)(int, int)) {
     notifyTool = callback;
     tools = [NSMutableDictionary dictionary];
     lastMode = lastSource = -1;
+    inputUnavailable = false;
     NSEventMask mask = NSEventMaskTabletProximity | NSEventMaskTabletPoint |
         NSEventMaskMouseMoved | NSEventMaskLeftMouseDown | NSEventMaskLeftMouseUp |
         NSEventMaskLeftMouseDragged | NSEventMaskRightMouseDown | NSEventMaskRightMouseUp |
@@ -52,29 +117,7 @@ bool tablet_input_install(void *window, void (*callback)(int, int)) {
         if (!targetWindow || !NSApp.isActive || NSApp.keyWindow != targetWindow) return event;
         // Standalone proximity events may have no window. Never inspect another
         // app's events or reinterpret events belonging to a dialog/other window.
-        if (event.window && event.window != targetWindow) return event;
-        BOOL proximity = event.type == NSEventTypeTabletProximity ||
-            event.subtype == NSEventSubtypeTabletProximity;
-        BOOL point = event.type == NSEventTypeTabletPoint ||
-            event.subtype == NSEventSubtypeTabletPoint;
-        if (proximity) {
-            NSNumber *key = @(event.deviceID);
-            if (event.isEnteringProximity) {
-                int mode = event.pointingDeviceType == NSPointingDeviceTypeEraser ? 2 :
-                    event.pointingDeviceType == NSPointingDeviceTypePen ? 1 : 0;
-                tools[key] = @(mode);
-                report(mode, 2);
-            } else {
-                [tools removeObjectForKey:key];
-                report(0, 2);
-            }
-        } else if (point) {
-            // pointingDeviceType is only valid on proximity events. If one was
-            // missed (e.g. launch while hovering), stay unknown until re-entry.
-            report([tools[@(event.deviceID)] intValue], 3);
-        } else {
-            report(0, 4);
-        }
+        inspectEvent(event);
         return event;
     }];
     blurObserver = [NSNotificationCenter.defaultCenter

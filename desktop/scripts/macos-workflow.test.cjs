@@ -21,6 +21,18 @@ const upload = steps.find((step) =>
   step.uses?.startsWith("actions/upload-artifact@"),
 );
 
+test("runs native tests on Intel while building the Apple Silicon target", () => {
+  assert.equal(workflow.jobs.macos["runs-on"], "macos-15-intel");
+  const nativeTests = steps.find((step) => step.name === "Test native storage");
+  assert.match(nativeTests.run, /--target x86_64-apple-darwin/);
+  assert.doesNotMatch(nativeTests.run, /aarch64-apple-darwin/);
+  const rust = steps.find((step) =>
+    step.name?.startsWith("Set up Apple Silicon Rust"),
+  );
+  assert.match(rust.run, /rustup target add aarch64-apple-darwin/);
+  assert.match(build.run, /--target aarch64-apple-darwin/);
+});
+
 test("retains the app for validation instead of requesting a DMG-only build", () => {
   const bundles = build.run.match(/--bundles\s+(\S+)/)[1].split(",");
   assert.deepEqual(new Set(bundles), new Set(["app", "dmg"]));

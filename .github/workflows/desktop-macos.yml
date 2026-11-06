@@ -19,7 +19,9 @@ concurrency:
 jobs:
   macos:
     name: Test and build macOS ARM64
-    runs-on: macos-26
+    # Use the Intel pool while standard ARM64 runners are capacity-constrained.
+    # Tests execute on the host; the distributed application remains ARM64.
+    runs-on: macos-15-intel
     timeout-minutes: 60
     defaults:
       run:
@@ -71,7 +73,7 @@ jobs:
           rustup target add aarch64-apple-darwin
 
       - name: Test native storage
-        run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --no-default-features --target aarch64-apple-darwin
+        run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --no-default-features --target x86_64-apple-darwin
 
       - name: Generate platform icons from the existing project artwork
         run: yarn --cwd desktop icons

@@ -151,7 +151,21 @@ pub fn run() {
             app.manage(crate::tablet::TabletInput::default());
             #[cfg(target_os = "macos")]
             crate::tablet::macos::install(app)?;
+            #[cfg(target_os = "windows")]
+            crate::tablet::windows_host::install(app)?;
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            #[cfg(target_os = "windows")]
+            if window.label() == "main" {
+                match event {
+                    tauri::WindowEvent::Focused(false) => crate::tablet::windows::reset(),
+                    tauri::WindowEvent::Destroyed => crate::tablet::windows::uninstall(),
+                    _ => {}
+                }
+            }
+            #[cfg(not(target_os = "windows"))]
+            let _ = (window, event);
         })
         .invoke_handler(tauri::generate_handler![get_tablet_state,get_context,choose_directory,list_boards,read_board,save_board,backup_board,rename_board,trash_board,list_trash,restore_trash,save_settings,import_settings,export_settings,import_board,list_recovery,read_recovery])
         .run(tauri::generate_context!())

@@ -493,6 +493,66 @@ describe("straight ink pen input and rendered previews", () => {
     },
   );
 
+  it("refreshes toolbar and cursor on native hover changes without another pointer event", () => {
+    const canvas = GlobalTestState.interactiveCanvas;
+    const result = GlobalTestState.renderResult;
+    move(100, 100, 0, { buttons: 0, button: -1 });
+    expect(canvas.style.cursor).toBe("crosshair");
+    result.rerender(<Excalidraw nativePenTool="eraser" />);
+    expect(result.getByToolName("eraser")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(canvas.style.cursor).toContain("url(");
+    // A WebView hover with no contact bits must not undo the native tool hint.
+    move(100, 100, 0, { buttons: 0, button: -1 });
+    expect(result.getByToolName("eraser")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    result.rerender(<Excalidraw nativePenTool="pen" />);
+    expect(result.getByToolName("freedraw")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(canvas.style.cursor).toBe("crosshair");
+    expect(h.state.cursorButton).toBe("up");
+    expect(h.elements).toHaveLength(0);
+  });
+
+  it("refreshes the cursor at pen contact instead of waiting for release", () => {
+    const canvas = GlobalTestState.interactiveCanvas;
+    fireEvent.pointerDown(
+      canvas,
+      event(100, 100, 0.5, { button: 5, buttons: 32 }),
+    );
+    expect(
+      GlobalTestState.renderResult.getByToolName("eraser"),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(canvas.style.cursor).toContain("url(");
+    up(100, 100, { button: 5 });
+    down(200, 100);
+    expect(
+      GlobalTestState.renderResult.getByToolName("freedraw"),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(canvas.style.cursor).toBe("crosshair");
+    up(200, 100);
+  });
+
+  it("refreshes the cursor on a DOM hover eraser toggle", () => {
+    const canvas = GlobalTestState.interactiveCanvas;
+    fireEvent.pointerDown(
+      canvas,
+      event(100, 100, 0, { button: 5, buttons: 32 }),
+    );
+    expect(
+      GlobalTestState.renderResult.getByToolName("eraser"),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(canvas.style.cursor).toContain("url(");
+    expect(h.elements).toHaveLength(0);
+    expect(h.state.cursorButton).toBe("up");
+  });
+
   it("uses native eraser state for WebKit mouse events and restores the pen", () => {
     API.setAppState({ width: 800, height: 600 });
     down(20, 30, true);

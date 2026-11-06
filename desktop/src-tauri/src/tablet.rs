@@ -1,6 +1,33 @@
 use serde::Serialize;
 use std::sync::Mutex;
 
+#[cfg(target_os = "windows")]
+pub mod windows;
+
+#[cfg(all(feature = "desktop", target_os = "windows"))]
+pub mod windows_host {
+    use super::TabletInput;
+    use std::sync::OnceLock;
+    use tauri::{Emitter, Manager};
+
+    static APP: OnceLock<tauri::AppHandle> = OnceLock::new();
+
+    fn changed(mode: i32, source: i32) {
+        if let Some(app) = APP.get() {
+            if let Some(state) = app.state::<TabletInput>().update(mode, source) {
+                let _ = app.emit_to("main", "native-tablet-state", state);
+            }
+        }
+    }
+
+    pub fn install(app: &tauri::App) -> tauri::Result<()> {
+        let window = app.get_webview_window("main").expect("main window");
+        let _ = APP.set(app.handle().clone());
+        super::windows::install(window.hwnd()?.0, changed);
+        Ok(())
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Mode {

@@ -8676,7 +8676,10 @@ class App extends React.Component<AppProps, AppState> {
       this.state.activeTool.type === "eraser" &&
       this.state.activeTool.lastActiveTool === previous
     ) {
-      this.setState({ activeTool: previous }, callback);
+      this.setState({ activeTool: previous }, () => {
+        this.cursor.reset();
+        callback?.();
+      });
       return true;
     }
     return false;
@@ -8699,7 +8702,10 @@ class App extends React.Component<AppProps, AppState> {
         }),
         selectedElementIds: {},
       },
-      callback,
+      () => {
+        this.cursor.reset();
+        callback?.();
+      },
     );
     return true;
   };

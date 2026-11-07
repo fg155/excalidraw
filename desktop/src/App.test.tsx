@@ -99,6 +99,31 @@ const empty = JSON.stringify({
 });
 
 describe("opt-in tablet input probe", () => {
+  it("keeps the current native state when clearing a recording", () => {
+    render(
+      <TabletInputProbe
+        nativeTablet={{ mode: "unknown", source: "ready", revision: 1 }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "数位板输入检测" }));
+    fireEvent.pointerDown(
+      screen.getByRole("group", { name: "数位板检测区域" }),
+      {
+        pointerType: "pen",
+        button: 5,
+        buttons: 32,
+        pressure: 0.5,
+      },
+    );
+    const report = screen.getByRole("textbox") as HTMLTextAreaElement;
+    expect(report.value).toContain("pointerdown");
+    fireEvent.click(screen.getByRole("button", { name: "清空记录" }));
+    expect(report.value).not.toContain("pointerdown");
+    expect(report.value).toContain(
+      '{"event":"native-tool","mode":"unknown","source":"ready","revision":1}',
+    );
+  });
+
   it("records pen state only while open, stops on request and clears on close", () => {
     render(<TabletInputProbe />);
     expect(screen.queryByRole("group", { name: "数位板检测区域" })).toBeNull();

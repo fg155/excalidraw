@@ -6,7 +6,7 @@ rust-version = "1.85"
 
 [features]
 default = ["desktop"]
-desktop = ["dep:tauri", "dep:tauri-build", "dep:rfd"]
+desktop = ["dep:tauri", "dep:tauri-build", "dep:rfd", "dep:wry"]
 custom-protocol = ["tauri/custom-protocol"]
 
 [lib]
@@ -32,4 +32,8 @@ tempfile = "3"
 uuid = { version = "1", features = ["v4"] }
 
 [target.'cfg(windows)'.dependencies]
+wry = { version = "=0.55.1", default-features = false, features = ["host-input-processing"], optional = true }
 windows-sys = { version = "0.59", features = ["Win32_Storage_FileSystem", "Win32_Foundation", "Win32_UI_Input_Pointer", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_Graphics_Gdi"] }
+
+[patch.crates-io]
+wry = { path = "vendor/wry-0.55.1" }

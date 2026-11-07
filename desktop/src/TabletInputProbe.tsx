@@ -118,7 +118,11 @@ function Probe({ nativeTablet }: { nativeTablet?: NativeTabletState }) {
         <button
           onClick={() => {
             previous.current = "";
-            setLines([]);
+            setLines(
+              nativeTablet
+                ? [JSON.stringify({ event: "native-tool", ...nativeTablet })]
+                : [],
+            );
           }}
         >
           清空记录

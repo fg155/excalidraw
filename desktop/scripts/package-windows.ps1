@@ -22,6 +22,12 @@ Get-ChildItem -LiteralPath $buildRoot -Filter '*.dll' -File | ForEach-Object {
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'LICENSE') -Destination (Join-Path $packageRoot 'LICENSE.txt')
 Copy-Item -LiteralPath (Join-Path $desktopRoot 'WINDOWS-PREVIEW.zh-CN.txt') -Destination (Join-Path $packageRoot 'README.zh-CN.txt')
 
+$wryLicenseRoot = Join-Path $packageRoot 'licenses/wry'
+New-Item -ItemType Directory -Path $wryLicenseRoot | Out-Null
+Copy-Item -LiteralPath (Join-Path $desktopRoot 'src-tauri/vendor/wry-0.55.1/LICENSE-MIT') -Destination $wryLicenseRoot
+Copy-Item -LiteralPath (Join-Path $desktopRoot 'src-tauri/vendor/wry-0.55.1/LICENSE-APACHE') -Destination $wryLicenseRoot
+Copy-Item -LiteralPath (Join-Path $desktopRoot 'src-tauri/vendor/README.md') -Destination (Join-Path $wryLicenseRoot 'LOCAL-CHANGES.md')
+
 $mathLicenseRoot = Join-Path $packageRoot 'licenses/mathjax'
 New-Item -ItemType Directory -Path $mathLicenseRoot | Out-Null
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'node_modules/@mathjax/src/LICENSE') -Destination (Join-Path $mathLicenseRoot 'Apache-2.0.txt')
